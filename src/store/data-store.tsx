@@ -478,6 +478,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       removerMidia,
       atualizarDuracaoMidia,
       reordenarMidia,
+      apkDownloadUrl,
+      setApkDownloadUrl,
     }),
     [
       clientes,
@@ -503,6 +505,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       removerMidia,
       atualizarDuracaoMidia,
       reordenarMidia,
+      apkDownloadUrl,
+      setApkDownloadUrl,
     ],
   );
 

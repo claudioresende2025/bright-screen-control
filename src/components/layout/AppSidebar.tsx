@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Monitor, ListMusic, Building2, Radio, Tv } from "lucide-react";
+import { LayoutDashboard, Monitor, ListMusic, Building2, Radio, Tv, Settings } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -18,6 +18,7 @@ const items = [
   { title: "Dispositivos", url: "/dispositivos", icon: Monitor },
   { title: "Playlists", url: "/playlists", icon: ListMusic },
   { title: "Clientes", url: "/clientes", icon: Building2 },
+  { title: "Configurações", url: "/configuracoes", icon: Settings },
 ];
 
 const tools = [{ title: "Abrir Player (TV)", url: "/player", icon: Tv }];
