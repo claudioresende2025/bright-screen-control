@@ -77,11 +77,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "SignageHub — Painel de Mídia Indoor" },
+      { name: "description", content: "Painel administrativo para gerenciamento centralizado de TVs e playlists de Mídia Indoor." },
+      { name: "author", content: "SignageHub" },
+      { property: "og:title", content: "SignageHub — Painel de Mídia Indoor" },
+      { property: "og:description", content: "Gerencie TVs, playlists e clientes em tempo real." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
@@ -90,6 +90,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         rel: "stylesheet",
         href: appCss,
+      },
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap",
       },
     ],
   }),
@@ -101,7 +107,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="pt-BR" className="dark">
       <head>
         <HeadContent />
       </head>
@@ -118,8 +124,40 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <DataProvider>
+        <AppShell />
+        <Toaster richColors position="top-right" theme="dark" />
+      </DataProvider>
     </QueryClientProvider>
+  );
+}
+
+import { DataProvider } from "../store/data-store";
+import { AppSidebar } from "../components/layout/AppSidebar";
+import { SidebarProvider, SidebarTrigger } from "../components/ui/sidebar";
+import { Toaster } from "../components/ui/sonner";
+
+function AppShell() {
+  return (
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-background text-foreground">
+        <AppSidebar />
+        <div className="flex-1 flex flex-col min-w-0">
+          <header className="h-14 flex items-center gap-3 border-b border-border/60 bg-card/40 backdrop-blur px-4 sticky top-0 z-30">
+            <SidebarTrigger />
+            <div className="flex items-center gap-2">
+              <span className="inline-block h-2 w-2 rounded-full bg-[color:var(--color-success)] animate-pulse" />
+              <span className="text-sm text-muted-foreground">Painel ao vivo</span>
+            </div>
+            <div className="ml-auto text-xs text-muted-foreground">
+              Conectado como <span className="text-foreground font-medium">Administrador</span>
+            </div>
+          </header>
+          <main className="flex-1 overflow-x-hidden">
+            <Outlet />
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
   );
 }
