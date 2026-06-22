@@ -236,6 +236,9 @@ interface DataCtx {
   removerMidia: (id: string) => Promise<void>;
   atualizarDuracaoMidia: (id: string, duracao_segundos: number) => Promise<void>;
   reordenarMidia: (id: string, direcao: "up" | "down") => Promise<void>;
+
+  apkDownloadUrl: string;
+  setApkDownloadUrl: (url: string) => void;
 }
 
 const Ctx = createContext<DataCtx | null>(null);
@@ -248,6 +251,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [playlists, setPlaylists] = useState<Playlist[]>(seedPlaylists);
   const [midias, setMidias] = useState<MidiaPlaylist[]>(seedMidias);
   const [pendingPlayers, setPendingPlayers] = useState<PendingPlayer[]>([]);
+  const [apkDownloadUrl, setApkDownloadUrlState] = useState<string>("");
+
+  // Hydrate APK url from localStorage on mount
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const saved = localStorage.getItem("signagehub_apk_url");
+    if (saved) setApkDownloadUrlState(saved);
+  }, []);
+
+  const setApkDownloadUrl = useCallback((url: string) => {
+    setApkDownloadUrlState(url);
+    if (typeof window !== "undefined") {
+      if (url) localStorage.setItem("signagehub_apk_url", url);
+      else localStorage.removeItem("signagehub_apk_url");
+    }
+  }, []);
 
   // Simulação de sincronização em tempo real
   useEffect(() => {
@@ -459,6 +478,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       removerMidia,
       atualizarDuracaoMidia,
       reordenarMidia,
+      apkDownloadUrl,
+      setApkDownloadUrl,
     }),
     [
       clientes,
@@ -484,6 +505,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       removerMidia,
       atualizarDuracaoMidia,
       reordenarMidia,
+      apkDownloadUrl,
+      setApkDownloadUrl,
     ],
   );
 

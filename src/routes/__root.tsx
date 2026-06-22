@@ -140,7 +140,10 @@ import { Toaster } from "../components/ui/sonner";
 
 function AppShell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const chromeless = pathname.startsWith("/player") || /\/preview$/.test(pathname);
+  const chromeless =
+    pathname.startsWith("/player") ||
+    pathname.startsWith("/baixar-apk") ||
+    /\/preview$/.test(pathname);
 
   if (chromeless) {
     return (

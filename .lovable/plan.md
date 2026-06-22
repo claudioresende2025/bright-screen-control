@@ -1,35 +1,52 @@
-## Problema
+## Diagnóstico
 
-1. O código **já é gerado com 6 dígitos** no fonte (`player.tsx`, `data-store.tsx`, `VincularTerminalDialog.tsx`). Mas a tela de pareamento (`PairingScreen.tsx`) usa caixas de dígito de largura fixa grande (`w-20` / `w-28`) que **estouram a largura no preview mobile (375px)** — visualmente só aparecem ~4 dígitos, dando a impressão de código curto.
-2. O QR Code atualmente aponta apenas para a URL do painel admin. Precisa virar **dois QRs alternados**: um para baixar o APK do player, outro para abrir o painel.
+O 404 acontece porque `public/downloads/signagehub-player.apk` não existe — Lovable não compila APK Android (precisa do Android SDK / Gradle). O QR aponta para um caminho vazio.
+
+Para o QR "já funcionar" ao ser escaneado, precisamos que ele encode uma **URL pública real do APK** (GitHub Releases, Google Drive com link direto, S3, Dropbox `?dl=1`, etc.). Como o binário precisa ser hospedado fora do Lovable, a solução é deixar essa URL **configurável pelo admin** e cair em uma página de fallback caso ainda não esteja configurada.
 
 ## Mudanças
 
-### 1. `src/components/player/PairingScreen.tsx` — responsivo + 2 QRs
+### 1. Persistir URL do APK no `data-store`
 
-- **Caixas de dígito responsivas:** trocar `h-24 w-20 md:h-32 md:w-28` por escala fluida (`h-14 w-11 sm:h-20 sm:w-16 md:h-32 md:w-28`) com fonte proporcional (`text-3xl sm:text-5xl md:text-7xl`) e gap menor no mobile. Garante que os 6 dígitos caibam em 375px.
-- **Layout do container:** trocar `md:grid-cols-[1fr_auto]` por flex-col no mobile para QR ficar abaixo, e reduzir paddings (`px-4 sm:px-8`).
-- **Dois QRs com alternância automática a cada 6s:**
-  - QR A — rótulo "Baixar APK na TV" → aponta para `${painelUrl}/download/signagehub-player.apk` (URL pública estática).
-  - QR B — rótulo "Abrir painel admin" → aponta para `painelUrl` (comportamento atual).
-  - Indicador de dots (●○ / ○●) abaixo do card mostrando qual QR está ativo.
-  - Implementado com `useState` + `setInterval` (cleanup no unmount).
+- Adicionar `apkDownloadUrl: string` ao estado global (`src/store/data-store.tsx`), com setter `setApkDownloadUrl(url)`.
+- Persistir em `localStorage` (`signagehub_apk_url`) para sobreviver a reloads.
+- Valor inicial: `""` (vazio → usa fallback).
 
-### 2. `src/routes/player.tsx` — passar URL do APK
+### 2. Nova rota `/configuracoes` (Configurações)
 
-- Calcular `apkUrl` a partir de `window.location.origin` (ex.: `${origin}/downloads/signagehub-player.apk`) e passar como prop `apkUrl` para `PairingScreen`.
+- Criar `src/routes/configuracoes.tsx` com um card "Player Android (APK)":
+  - Input "URL pública do APK" + botão Salvar.
+  - Texto de ajuda explicando formatos aceitos (GitHub Releases `…/releases/download/...apk`, Drive `uc?export=download&id=...`, Dropbox `?dl=1`, S3 público).
+  - Preview do QR code gerado a partir da URL.
+  - Botão "Testar download" (abre em nova aba).
+- Adicionar item "Configurações" na `AppSidebar`.
 
-### 3. `public/downloads/signagehub-player.apk` (placeholder)
+### 3. Nova rota pública `/baixar-apk` (fallback / landing)
 
-- Não é possível compilar APK no Lovable. Criar um README em `public/downloads/README.md` explicando que o arquivo `.apk` deve ser gerado a partir de `/android-player/` (Android Studio → Build → APK) e copiado manualmente para `public/downloads/signagehub-player.apk`. Enquanto o arquivo real não existe, o QR ainda funciona — apenas dá 404 ao baixar, que é o comportamento esperado até o usuário fazer o build.
+- Criar `src/routes/baixar-apk.tsx` — página leve, sem layout admin:
+  - Se `apkDownloadUrl` estiver configurada → **redireciona imediatamente** via `<meta http-equiv="refresh" content="0; url=…">` + `window.location.replace()` no `useEffect` (auto-download).
+  - Se vazia → mostra mensagem "APK ainda não publicado. Peça ao administrador para configurar a URL do APK em Configurações." com instruções de instalação manual no Android TV.
+- Essa rota é a que o QR sempre aponta. Vantagem: a URL impressa no QR é estável (`{origin}/baixar-apk`) mesmo quando o admin troca o link do APK depois.
+
+### 4. Atualizar QR na `PairingScreen`
+
+- Em `src/routes/player.tsx`, trocar `apkUrl` para `${origin}/baixar-apk` (em vez de apontar direto para `/downloads/...apk`).
+- Manter a alternância dos 2 QRs (download / painel) que já existe.
+
+### 5. Remover placeholder quebrado
+
+- Excluir `public/downloads/README.md` (não usado mais).
 
 ### Arquivos tocados
 
-- editar `src/components/player/PairingScreen.tsx`
-- editar `src/routes/player.tsx`
-- criar `public/downloads/README.md`
+- editar `src/store/data-store.tsx` (adicionar `apkDownloadUrl` + setter + persistência)
+- criar `src/routes/configuracoes.tsx`
+- criar `src/routes/baixar-apk.tsx`
+- editar `src/components/layout/AppSidebar.tsx` (item de menu)
+- editar `src/routes/player.tsx` (apontar QR para `/baixar-apk`)
+- remover `public/downloads/README.md`
 
 ### Fora de escopo
 
-- Hospedar/gerar o `.apk` automaticamente (requer Android SDK, fora do runtime).
-- Mudar lógica de geração de código (já está correta com 6 dígitos).
+- Compilar o APK automaticamente (impossível sem Android SDK no runtime).
+- Upload do binário dentro do app (exigiria Lovable Cloud Storage — pode ser próximo passo se você quiser).

@@ -76,7 +76,7 @@ function PlayerRoute() {
 
   const origin = mounted && typeof window !== "undefined" ? window.location.origin : "";
   const painelUrl = origin + "/dispositivos";
-  const apkUrl = origin + "/downloads/signagehub-player.apk";
+  const apkUrl = origin + "/baixar-apk";
 
   return (
     <div className="fixed inset-0 bg-black text-white overflow-hidden">
