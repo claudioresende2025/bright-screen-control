@@ -23,7 +23,7 @@ import { useData } from "@/store/data-store";
 import { toast } from "sonner";
 
 export function VincularTerminalDialog({ trigger }: { trigger: ReactNode }) {
-  const { clientes, vincularDispositivo, criarCliente } = useData();
+  const { clientes, vincularPorCodigo, criarCliente, pendingPlayers } = useData();
   const [open, setOpen] = useState(false);
   const [nome, setNome] = useState("");
   const [clienteId, setClienteId] = useState<string>("");
@@ -57,16 +57,18 @@ export function VincularTerminalDialog({ trigger }: { trigger: ReactNode }) {
         });
         cid = c.id;
       }
-      await vincularDispositivo({
+      await vincularPorCodigo({
         cliente_id: cid,
         nome_tela: nome.trim(),
-        codigo_vinculo: codigo,
+        codigo,
       });
       toast.success("Terminal vinculado com sucesso");
       reset();
       setOpen(false);
     } catch (e) {
-      toast.error("Falha ao vincular terminal");
+      toast.error(
+        e instanceof Error ? e.message : "Falha ao vincular terminal — verifique o código",
+      );
     } finally {
       setSaving(false);
     }
@@ -139,7 +141,12 @@ export function VincularTerminalDialog({ trigger }: { trigger: ReactNode }) {
               </InputOTPGroup>
             </InputOTP>
             <p className="text-xs text-muted-foreground">
-              Gerado pelo aplicativo player rodando na TV.
+              Código de 6 dígitos exibido na TV ao abrir o player.{" "}
+              {pendingPlayers.length > 0 ? (
+                <span className="text-[color:var(--color-success)]">
+                  {pendingPlayers.length} player(s) aguardando.
+                </span>
+              ) : null}
             </p>
           </div>
         </div>
