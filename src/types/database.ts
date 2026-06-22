@@ -33,3 +33,9 @@ export interface MidiaPlaylist {
   nome_arquivo: string;
   tamanho_bytes: number;
 }
+
+export interface PendingPlayer {
+  codigo: string;
+  device_local_id: string;
+  criado_em: string;
+}
