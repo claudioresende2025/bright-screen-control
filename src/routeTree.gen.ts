@@ -9,9 +9,15 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as PlaylistsRouteImport } from './routes/playlists'
 import { Route as DispositivosRouteImport } from './routes/dispositivos'
 import { Route as IndexRouteImport } from './routes/index'
 
+const PlaylistsRoute = PlaylistsRouteImport.update({
+  id: '/playlists',
+  path: '/playlists',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DispositivosRoute = DispositivosRouteImport.update({
   id: '/dispositivos',
   path: '/dispositivos',
@@ -26,31 +32,42 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dispositivos': typeof DispositivosRoute
+  '/playlists': typeof PlaylistsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dispositivos': typeof DispositivosRoute
+  '/playlists': typeof PlaylistsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dispositivos': typeof DispositivosRoute
+  '/playlists': typeof PlaylistsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dispositivos'
+  fullPaths: '/' | '/dispositivos' | '/playlists'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dispositivos'
-  id: '__root__' | '/' | '/dispositivos'
+  to: '/' | '/dispositivos' | '/playlists'
+  id: '__root__' | '/' | '/dispositivos' | '/playlists'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DispositivosRoute: typeof DispositivosRoute
+  PlaylistsRoute: typeof PlaylistsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/playlists': {
+      id: '/playlists'
+      path: '/playlists'
+      fullPath: '/playlists'
+      preLoaderRoute: typeof PlaylistsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dispositivos': {
       id: '/dispositivos'
       path: '/dispositivos'
@@ -71,6 +88,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DispositivosRoute: DispositivosRoute,
+  PlaylistsRoute: PlaylistsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
