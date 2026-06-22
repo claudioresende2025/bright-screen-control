@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { Progress } from "@/components/ui/progress";
 import { useData } from "@/store/data-store";
 import { toast } from "sonner";
+import { MediaPreview } from "./MediaPreview";
 
 interface PendingUpload {
   id: string;
@@ -15,13 +16,14 @@ export function UploadDropzone({ playlistId }: { playlistId: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [pending, setPending] = useState<PendingUpload[]>([]);
+  const [previewFile, setPreviewFile] = useState<File | null>(null);
 
   const placeholderUrl = (isImage: boolean, name: string) =>
     isImage
       ? `https://picsum.photos/seed/${encodeURIComponent(name)}/600/400`
       : "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4";
 
-  const simulateUpload = (file: File) => {
+  const simulateUpload = (file: File, duracao: number) => {
     const id = Math.random().toString(36).slice(2);
     setPending((p) => [...p, { id, name: file.name, progress: 0 }]);
 
@@ -46,6 +48,7 @@ export function UploadDropzone({ playlistId }: { playlistId: string }) {
             tipo_midia: isImage ? "image" : "video",
             nome_arquivo: file.name,
             tamanho_bytes: file.size,
+            duracao_segundos: duracao,
           }).then(() => {
             toast.success(`${file.name} adicionado à playlist`);
           });
@@ -60,11 +63,25 @@ export function UploadDropzone({ playlistId }: { playlistId: string }) {
 
   const handleFiles = (files: FileList | null) => {
     if (!files) return;
-    Array.from(files).forEach(simulateUpload);
+    // Open preview for the first file; queue more later
+    const arr = Array.from(files);
+    if (arr.length === 0) return;
+    setPreviewFile(arr[0]);
   };
 
   return (
     <div className="space-y-3">
+      {previewFile ? (
+        <MediaPreview
+          file={previewFile}
+          onCancel={() => setPreviewFile(null)}
+          onConfirm={({ duracao_segundos }) => {
+            simulateUpload(previewFile, duracao_segundos);
+            setPreviewFile(null);
+          }}
+        />
+      ) : null}
+
       <div
         onClick={() => inputRef.current?.click()}
         onDragOver={(e) => {

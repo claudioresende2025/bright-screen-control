@@ -4,7 +4,8 @@ import { Monitor, Wifi, WifiOff, ListMusic, Activity } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useData, tempoRelativo } from "@/store/data-store";
+import { useData } from "@/store/data-store";
+import { RelativeTime } from "@/components/common/RelativeTime";
 import { StatusBadge } from "@/components/dispositivos/StatusBadge";
 import { Button } from "@/components/ui/button";
 
@@ -105,9 +106,10 @@ function Index() {
                     </p>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-xs text-muted-foreground">
-                      {tempoRelativo(d.ultima_sincronizacao)}
-                    </span>
+                    <RelativeTime
+                      iso={d.ultima_sincronizacao}
+                      className="text-xs text-muted-foreground"
+                    />
                     <StatusBadge online={d.status_online} />
                   </div>
                 </div>

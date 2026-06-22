@@ -1,219 +1,106 @@
-## Visão Geral
+# Player de TV + Pré-visualização de Mídia
 
-Painel administrativo single-user (você como Admin) para gerenciar TVs de Digital Signage em estabelecimentos parceiros. Inspirado no Climb Player: foco em monitoramento de terminais, vinculação por código de pareamento e gestão de playlists com mídias ordenáveis.
+## 1. Player Web (rota `/player`)
 
-Tudo rodará **mockado em memória** (React Context + estado), mas com tipos/shape idênticos às tabelas Supabase para conexão futura sem refactor.
+Nova rota pública `src/routes/player.tsx` fora do layout administrativo (sem sidebar, fullscreen preto). Funciona em qualquer Smart TV, Fire TV, Chromecast com navegador ou mini PC.
 
----
+**Comportamento:**
+- Ao abrir pela primeira vez (sem vínculo salvo): gera código de 6 dígitos, salva em `localStorage` (`player_codigo`, `player_device_id`) e exibe tela cheia preta com:
+  - Logo/nome do sistema
+  - Código grande, monoespaçado, com brilho neon
+  - Texto "Acesse o painel e vincule este código"
+  - QR Code opcional (lib `qrcode.react`) apontando para a tela de vínculo
+  - Indicador de status "Aguardando vínculo..." pulsante
+- Polling a cada 5s no `data-store` procurando dispositivo com `codigo_vinculo` correspondente e `vinculado=true`.
+- Quando vinculado: troca para o **modo Playback** — carrega a playlist do dispositivo e reproduz em loop:
+  - `<video autoplay muted loop={false} onEnded={next}>` para vídeo
+  - `<img>` com `setTimeout(next, duracao_segundos * 1000)` para imagem
+  - Transição fade entre mídias
+  - Re-poll a cada 30s para detectar troca de playlist pelo admin → recarrega lista sem reiniciar a mídia atual
+- Atualiza `ultima_sincronizacao` no store a cada heartbeat (a cada 30s).
+- Botão oculto canto superior direito (aparece no hover/tap longo) para desvincular/resetar.
 
-## Estrutura de Navegação
+**Integração com gestor:** o `VincularTerminalDialog` existente passa a procurar pelo código que o player web gerou (em vez de o admin criar o código). Mantém o mesmo fluxo visual de input OTP.
 
-Sidebar fixa à esquerda (dark, colapsável em mobile):
+## 2. APK Android (projeto separado)
 
-- Dashboard (visão geral + métricas)
-- Dispositivos (TVs / Terminais)
-- Playlists
-- Clientes
-- (rodapé) Admin badge
+Pasta nova `/android-player/` na raiz do projeto, contendo um projeto **Android Studio Kotlin** mínimo com WebView fullscreen apontando para a URL do Player Web publicado.
 
-Header superior com título da página atual + ação principal contextual.
-
----
-
-## Rotas (TanStack Router)
-
-```
-src/routes/
-  __root.tsx           → SidebarProvider + layout shell dark
-  index.tsx            → Dashboard
-  dispositivos.tsx     → Grid de terminais
-  playlists.tsx        → Lista de playlists
-  playlists.$id.tsx    → Editor de playlist (upload + ordenação)
-  clientes.tsx         → Lista de clientes
-```
-
-Cada rota tem `head()` próprio (title/description).
-
----
-
-## Telas
-
-### Dashboard (`/`)
-
-- 4 cards de métricas no topo:
-  - Total de Terminais
-  - TVs Online (badge verde com pulse animation)
-  - TVs Offline (badge vermelho)
-  - Total de Playlists
-- Seção "Atividade Recente": últimas sincronizações dos dispositivos
-- Seção "Status por Cliente": mini-tabela agrupando TVs por estabelecimento
-
-### Dispositivos (`/dispositivos`)
-
-- Grid responsivo de cards (3 col desktop, 2 tablet, 1 mobile)
-- Cada card:
-  - Nome da TV + ícone Monitor
-  - Cliente/Local (subtítulo)
-  - Status badge (Online verde piscante / Offline cinza)
-  - Playlist ativa (com Select inline para troca rápida)
-  - "Última sincronização: há X min" (relativo)
-  - Menu de ações (editar, remover)
-- Botão CTA topo direito: **"Vincular Novo Terminal"**
-- Modal de vinculação com campos:
-  - Nome do Ponto de Tela (input)
-  - Cliente (Select com opção "+ Novo Cliente")
-  - Código de Pareamento (6 dígitos, input-otp estilizado)
-- Empty state ilustrado quando nenhum terminal cadastrado
-
-### Playlists (`/playlists`)
-
-- Lista/grid de playlists com:
-  - Nome
-  - Nº de mídias
-  - Duração total estimada
-  - Dispositivos usando
-  - Botão "Editar" → navega a `/playlists/$id`
-- Botão "Nova Playlist"
-
-### Editor de Playlist (`/playlists/$id`)
-
-- Header com nome editável da playlist
-- Área de upload Drag & Drop (dashed border, ícone Upload)
-  - Aceita .mp4, .png, .jpg, .jpeg
-  - Mostra barra de progresso simulada por arquivo durante "upload"
-- Lista vertical ordenada (reordenação por botões ↑/↓ ou drag handle):
-  - Thumbnail (vídeo: frame placeholder / imagem: preview)
-  - Ícone tipo (Video / Image)
-  - Nome do arquivo + tamanho (KB/MB)
-  - Se imagem: input numérico "Duração (s)" inline, default 10
-  - Se vídeo: badge "duração do vídeo"
-  - Botão remover (Trash)
-- Empty state quando playlist vazia
-
-### Clientes (`/clientes`)
-
-- Tabela: Estabelecimento, Contato, Nº de TVs, Criado em, Ações
-- Modal criar/editar cliente
-
----
-
-## Modelo de Dados (TypeScript ↔ Supabase)
-
-`src/types/database.ts` — interfaces espelhando o schema:
-
-```ts
-interface Cliente {
-  id: string;
-  nome_estabelecimento: string;
-  contato: string;
-  criado_em: string; // ISO
-}
-interface Dispositivo {
-  id: string;
-  cliente_id: string;
-  nome_tela: string;
-  codigo_vinculo: string; // 6 dígitos
-  playlist_id: string | null;
-  status_online: boolean;
-  ultima_sincronizacao: string; // ISO
-}
-interface Playlist {
-  id: string;
-  nome_playlist: string;
-  criado_em: string;
-}
-interface MidiaPlaylist {
-  id: string;
-  playlist_id: string;
-  url_arquivo: string;
-  tipo_midia: 'video' | 'image';
-  duracao_segundos: number;
-  ordem_exibicao: number;
-  // extras de UI (não persistidos): nome_arquivo, tamanho_bytes
-}
+**Estrutura:**
+```text
+android-player/
+  README.md                  -- instruções de build (Android Studio, gradle, gerar APK assinado, instalar em TV Box)
+  build.gradle.kts
+  settings.gradle.kts
+  gradle.properties
+  app/
+    build.gradle.kts
+    src/main/
+      AndroidManifest.xml    -- LEANBACK_LAUNCHER, fullscreen, KEEP_SCREEN_ON, INTERNET
+      java/com/midiaindoor/player/
+        MainActivity.kt      -- WebView fullscreen, JS+DOM storage, hardware accel, autoplay
+        BootReceiver.kt      -- inicia app no boot da TV
+      res/
+        values/strings.xml   -- PLAYER_URL configurável
+        drawable/            -- ícone do app
+        layout/activity_main.xml
 ```
 
-## Camada de Dados Mockada
+**Características do APK:**
+- Imersivo (esconde status/nav bar), tela sempre ligada
+- Suporta Android TV (DPAD/Leanback) e tablets/TV Box comuns
+- WebView com `mediaPlaybackRequiresUserGesture=false` para autoplay
+- Auto-start no boot
+- URL do player configurável em `strings.xml` (default: URL publicada do projeto Lovable)
 
-`src/store/data-store.tsx` — React Context provedor único:
+**Não é compilado pelo Lovable** — o usuário abre no Android Studio e gera o APK. README com passo a passo.
 
-- Estado in-memory com seed inicial
-- Funções CRUD assíncronas (`async` com `setTimeout` simulando latência) com mesma assinatura esperada de chamadas Supabase → troca futura é apenas substituir o corpo das funções por `supabase.from(...)`
-- Hook `useData()` exposto
+## 3. Pré-visualização de Mídia
 
-Simulação de status online: a cada ~5s, um job atualiza `ultima_sincronizacao` dos dispositivos online; toggle aleatório controlado para feedback visual realista.
+### 3a. Preview no upload (`UploadDropzone`)
+Antes de confirmar o "Adicionar à playlist":
+- Após selecionar/arrastar arquivo, cria `URL.createObjectURL(file)` e mostra:
+  - Vídeos: player com controles (play/pause/seek), exibe duração detectada e dimensões
+  - Imagens: thumbnail grande + slider de duração (3-60s, default 8s)
+- Mostra metadados: nome, tamanho (MB), tipo, resolução
+- Botões "Cancelar" e "Adicionar à playlist"
+- Revoga objectURL ao desmontar/cancelar
 
----
+### 3b. Preview da Playlist completa
+Nova rota `src/routes/playlists.$id.preview.tsx`:
+- Renderiza o **mesmo componente de Playback** usado pelo `/player`, em modo simulador
+- Frame com moldura de TV (16:9, bordas escuras, cantos arredondados) ocupando o centro
+- Sidebar lateral mostrando: mídia atual, próxima, progresso da mídia (barra), índice (3/7), botões "Anterior / Pausar / Próximo"
+- Botão "Tela cheia" → expande para fullscreen real do navegador
+- Acessível via botão "Preview" no `playlists.$id.tsx` (editor)
 
-## Seed Inicial
+## 4. Componentes a criar/alterar
 
-3 clientes:
+**Criar:**
+- `src/routes/player.tsx` — rota pública do player
+- `src/routes/playlists.$id.preview.tsx` — simulador de playlist
+- `src/components/player/PairingScreen.tsx` — tela de código
+- `src/components/player/PlaybackEngine.tsx` — motor de reprodução reutilizado
+- `src/components/playlists/MediaPreview.tsx` — preview no upload
+- `android-player/**` — projeto Android completo
 
-- Supermercado Bom Preço
-- Academia Fit Center
-- Clínica Vida Saudável
+**Alterar:**
+- `src/components/playlists/UploadDropzone.tsx` — integra `MediaPreview`
+- `src/routes/playlists.$id.tsx` — botão "Preview"
+- `src/components/dispositivos/VincularTerminalDialog.tsx` — texto/UX alinhado ao novo fluxo (admin digita o código que apareceu na TV)
+- `src/routes/__root.tsx` — permitir que `/player` e `/playlists/$id/preview` renderizem sem sidebar (check de pathname)
+- `src/store/data-store.tsx` — função `vincularPorCodigo(codigo, cliente_id, nome)` e `getDispositivoPorCodigo(codigo)` para o player consultar
 
-5 dispositivos distribuídos (ex: 2 no supermercado, 2 na academia, 1 na clínica), mix de online/offline.
+## 5. Dependências
 
-2 playlists:
+- `qrcode.react` (QR code na tela de pareamento)
 
-- "Promoções da Semana" (3 imagens + 1 vídeo)
-- "Institucional Geral" (2 vídeos + 2 imagens)
+## 6. Correções incidentais
 
-Mídias com URLs placeholder (picsum/sample videos) para thumbnails.
+Hidratação SSR quebrando por `formatDistanceToNow(new Date(timestamp))` com datas mock — vou marcar os componentes afetados com guarda de mount (`useEffect` + estado) ou usar `suppressHydrationWarning` no span do tempo relativo.
 
----
+## Fora de escopo
 
-## Design System (dark mode premium)
-
-`src/styles.css` — tokens oklch:
-
-- `--background`: chumbo profundo (~oklch(0.16 0.01 260))
-- `--card`: chumbo elevado
-- `--foreground`: branco quente
-- `--primary`: azul elétrico (~oklch(0.68 0.22 250))
-- `--accent-success`: verde neon (~oklch(0.78 0.22 145)) — usado para status online com `animate-pulse`
-- `--destructive`: vermelho para offline
-- `--border`: cinza translúcido
-- Shadows e gradientes sutis em cards
-
-Tipografia: Inter (via `<link>` em `__root.tsx`).
-
-Componentes shadcn usados: Card, Button, Badge, Dialog, Input, Select, Table, Sidebar, Sonner (toasts), Progress, Tabs, DropdownMenu, Input-OTP, Tooltip.
-
----
-
-## Componentes Reutilizáveis
-
-```
-src/components/
-  layout/AppSidebar.tsx
-  layout/PageHeader.tsx
-  dashboard/MetricCard.tsx
-  dispositivos/DispositivoCard.tsx
-  dispositivos/VincularTerminalDialog.tsx
-  dispositivos/StatusBadge.tsx
-  playlists/PlaylistCard.tsx
-  playlists/MidiaListItem.tsx
-  playlists/UploadDropzone.tsx
-  clientes/ClienteFormDialog.tsx
-  common/EmptyState.tsx
-```
-
----
-
-## Entregáveis Técnicos
-
-1. Tokens de design no `src/styles.css` + fonte Inter
-2. Sidebar + shell em `__root.tsx`
-3. Tipos e store mockada com seed completo
-4. Todas as rotas listadas com componentes finos consumindo o store
-5. Modais isolados, toasts em ações (vincular TV, salvar playlist, etc.)
-6. Empty states ilustrados em todas as listas
-7. Animações sutis (pulse no status online, hover lift nos cards)
-
-**Fora do escopo desta entrega** (pode ser adicionado depois): conexão real Supabase, autenticação, upload real para Storage, websocket de status, APK player.
-
-**Criar APK**
-
-Criar o arquivo APK para que seja instalado no celular e também na TV.
+- Comunicação real-time via WebSocket (mantém polling simulado)
+- Upload real para storage (mantém objectURL local até integrarmos Lovable Cloud)
+- Assinatura do APK / publicação na Play Store

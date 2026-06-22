@@ -15,7 +15,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "./StatusBadge";
-import { useData, tempoRelativo } from "@/store/data-store";
+import { useData } from "@/store/data-store";
+import { RelativeTime } from "@/components/common/RelativeTime";
 import type { Dispositivo } from "@/types/database";
 import { toast } from "sonner";
 
@@ -89,7 +90,7 @@ export function DispositivoCard({ dispositivo }: { dispositivo: Dispositivo }) {
         <div className="flex items-center justify-between pt-1 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1.5">
             <Wifi className="h-3.5 w-3.5" />
-            Sync {tempoRelativo(dispositivo.ultima_sincronizacao)}
+            Sync <RelativeTime iso={dispositivo.ultima_sincronizacao} />
           </span>
           <span className="font-mono text-[11px] tracking-wider opacity-70">
             #{dispositivo.codigo_vinculo}

@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { ArrowLeft, ListMusic, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, ListMusic, Pencil, Play, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -97,6 +97,11 @@ function PlaylistEditor() {
               </>
             ) : (
               <>
+                <Button asChild variant="default" size="sm">
+                  <Link to="/playlists/$id/preview" params={{ id: playlist.id }}>
+                    <Play className="h-4 w-4 mr-1.5" /> Preview
+                  </Link>
+                </Button>
                 <Button variant="outline" size="sm" onClick={() => setEditingName(true)}>
                   <Pencil className="h-4 w-4 mr-1.5" /> Renomear
                 </Button>

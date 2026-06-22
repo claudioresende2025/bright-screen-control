@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">SignageHub Player</string>
+    <!-- Substitua pela URL publicada do seu projeto SignageHub -->
+    <string name="player_url">https://exemplo.lovable.app/player</string>
+</resources>

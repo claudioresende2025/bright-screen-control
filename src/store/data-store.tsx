@@ -11,6 +11,7 @@ import type {
   Cliente,
   Dispositivo,
   MidiaPlaylist,
+  PendingPlayer,
   Playlist,
   TipoMidia,
 } from "../types/database";
@@ -197,6 +198,7 @@ interface DataCtx {
   dispositivos: Dispositivo[];
   playlists: Playlist[];
   midias: MidiaPlaylist[];
+  pendingPlayers: PendingPlayer[];
 
   criarCliente: (data: Omit<Cliente, "id" | "criado_em">) => Promise<Cliente>;
   atualizarCliente: (id: string, data: Partial<Cliente>) => Promise<void>;
@@ -207,6 +209,15 @@ interface DataCtx {
     nome_tela: string;
     codigo_vinculo: string;
   }) => Promise<Dispositivo>;
+  vincularPorCodigo: (data: {
+    cliente_id: string;
+    nome_tela: string;
+    codigo: string;
+  }) => Promise<Dispositivo>;
+  registrarPendingPlayer: (codigo: string, device_local_id: string) => void;
+  removerPendingPlayer: (codigo: string) => void;
+  getDispositivoPorCodigo: (codigo: string) => Dispositivo | undefined;
+  heartbeatDispositivo: (id: string) => void;
   removerDispositivo: (id: string) => Promise<void>;
   trocarPlaylistDoDispositivo: (id: string, playlist_id: string | null) => Promise<void>;
 
@@ -236,6 +247,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [dispositivos, setDispositivos] = useState<Dispositivo[]>(seedDispositivos);
   const [playlists, setPlaylists] = useState<Playlist[]>(seedPlaylists);
   const [midias, setMidias] = useState<MidiaPlaylist[]>(seedMidias);
+  const [pendingPlayers, setPendingPlayers] = useState<PendingPlayer[]>([]);
 
   // Simulação de sincronização em tempo real
   useEffect(() => {
@@ -280,6 +292,56 @@ export function DataProvider({ children }: { children: ReactNode }) {
     };
     setDispositivos((p) => [...p, d]);
     return d;
+  }, []);
+
+  const vincularPorCodigo: DataCtx["vincularPorCodigo"] = useCallback(async (data) => {
+    await delay(300);
+    // Check pending player with that code
+    const pending = pendingPlayers.find((p) => p.codigo === data.codigo);
+    if (!pending) {
+      throw new Error("Nenhum player aguardando vínculo com esse código");
+    }
+    const d: Dispositivo = {
+      id: pending.device_local_id,
+      cliente_id: data.cliente_id,
+      nome_tela: data.nome_tela,
+      codigo_vinculo: data.codigo,
+      playlist_id: null,
+      status_online: true,
+      ultima_sincronizacao: new Date().toISOString(),
+    };
+    setDispositivos((p) => [...p, d]);
+    setPendingPlayers((p) => p.filter((x) => x.codigo !== data.codigo));
+    return d;
+  }, [pendingPlayers]);
+
+  const registrarPendingPlayer: DataCtx["registrarPendingPlayer"] = useCallback(
+    (codigo, device_local_id) => {
+      setPendingPlayers((p) => {
+        if (p.some((x) => x.codigo === codigo)) return p;
+        return [...p, { codigo, device_local_id, criado_em: new Date().toISOString() }];
+      });
+    },
+    [],
+  );
+
+  const removerPendingPlayer: DataCtx["removerPendingPlayer"] = useCallback((codigo) => {
+    setPendingPlayers((p) => p.filter((x) => x.codigo !== codigo));
+  }, []);
+
+  const getDispositivoPorCodigo: DataCtx["getDispositivoPorCodigo"] = useCallback(
+    (codigo) => dispositivos.find((d) => d.codigo_vinculo === codigo),
+    [dispositivos],
+  );
+
+  const heartbeatDispositivo: DataCtx["heartbeatDispositivo"] = useCallback((id) => {
+    setDispositivos((p) =>
+      p.map((d) =>
+        d.id === id
+          ? { ...d, status_online: true, ultima_sincronizacao: new Date().toISOString() }
+          : d,
+      ),
+    );
   }, []);
 
   const removerDispositivo: DataCtx["removerDispositivo"] = useCallback(async (id) => {
@@ -378,10 +440,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
       dispositivos,
       playlists,
       midias,
+      pendingPlayers,
       criarCliente,
       atualizarCliente,
       removerCliente,
       vincularDispositivo,
+      vincularPorCodigo,
+      registrarPendingPlayer,
+      removerPendingPlayer,
+      getDispositivoPorCodigo,
+      heartbeatDispositivo,
       removerDispositivo,
       trocarPlaylistDoDispositivo,
       criarPlaylist,
@@ -397,10 +465,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
       dispositivos,
       playlists,
       midias,
+      pendingPlayers,
       criarCliente,
       atualizarCliente,
       removerCliente,
       vincularDispositivo,
+      vincularPorCodigo,
+      registrarPendingPlayer,
+      removerPendingPlayer,
+      getDispositivoPorCodigo,
+      heartbeatDispositivo,
       removerDispositivo,
       trocarPlaylistDoDispositivo,
       criarPlaylist,
