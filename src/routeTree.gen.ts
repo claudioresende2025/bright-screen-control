@@ -12,7 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as PlaylistsRouteImport } from './routes/playlists'
 import { Route as PlayerRouteImport } from './routes/player'
 import { Route as DispositivosRouteImport } from './routes/dispositivos'
+import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as ClientesRouteImport } from './routes/clientes'
+import { Route as BaixarApkRouteImport } from './routes/baixar-apk'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PlaylistsIdRouteImport } from './routes/playlists.$id'
 import { Route as PlaylistsIdPreviewRouteImport } from './routes/playlists.$id.preview'
@@ -32,9 +34,19 @@ const DispositivosRoute = DispositivosRouteImport.update({
   path: '/dispositivos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ClientesRoute = ClientesRouteImport.update({
   id: '/clientes',
   path: '/clientes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BaixarApkRoute = BaixarApkRouteImport.update({
+  id: '/baixar-apk',
+  path: '/baixar-apk',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -55,7 +67,9 @@ const PlaylistsIdPreviewRoute = PlaylistsIdPreviewRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/baixar-apk': typeof BaixarApkRoute
   '/clientes': typeof ClientesRoute
+  '/configuracoes': typeof ConfiguracoesRoute
   '/dispositivos': typeof DispositivosRoute
   '/player': typeof PlayerRoute
   '/playlists': typeof PlaylistsRouteWithChildren
@@ -64,7 +78,9 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/baixar-apk': typeof BaixarApkRoute
   '/clientes': typeof ClientesRoute
+  '/configuracoes': typeof ConfiguracoesRoute
   '/dispositivos': typeof DispositivosRoute
   '/player': typeof PlayerRoute
   '/playlists': typeof PlaylistsRouteWithChildren
@@ -74,7 +90,9 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/baixar-apk': typeof BaixarApkRoute
   '/clientes': typeof ClientesRoute
+  '/configuracoes': typeof ConfiguracoesRoute
   '/dispositivos': typeof DispositivosRoute
   '/player': typeof PlayerRoute
   '/playlists': typeof PlaylistsRouteWithChildren
@@ -85,7 +103,9 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/baixar-apk'
     | '/clientes'
+    | '/configuracoes'
     | '/dispositivos'
     | '/player'
     | '/playlists'
@@ -94,7 +114,9 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/baixar-apk'
     | '/clientes'
+    | '/configuracoes'
     | '/dispositivos'
     | '/player'
     | '/playlists'
@@ -103,7 +125,9 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/baixar-apk'
     | '/clientes'
+    | '/configuracoes'
     | '/dispositivos'
     | '/player'
     | '/playlists'
@@ -113,7 +137,9 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BaixarApkRoute: typeof BaixarApkRoute
   ClientesRoute: typeof ClientesRoute
+  ConfiguracoesRoute: typeof ConfiguracoesRoute
   DispositivosRoute: typeof DispositivosRoute
   PlayerRoute: typeof PlayerRoute
   PlaylistsRoute: typeof PlaylistsRouteWithChildren
@@ -142,11 +168,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DispositivosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/configuracoes': {
+      id: '/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof ConfiguracoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/clientes': {
       id: '/clientes'
       path: '/clientes'
       fullPath: '/clientes'
       preLoaderRoute: typeof ClientesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/baixar-apk': {
+      id: '/baixar-apk'
+      path: '/baixar-apk'
+      fullPath: '/baixar-apk'
+      preLoaderRoute: typeof BaixarApkRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -199,7 +239,9 @@ const PlaylistsRouteWithChildren = PlaylistsRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BaixarApkRoute: BaixarApkRoute,
   ClientesRoute: ClientesRoute,
+  ConfiguracoesRoute: ConfiguracoesRoute,
   DispositivosRoute: DispositivosRoute,
   PlayerRoute: PlayerRoute,
   PlaylistsRoute: PlaylistsRouteWithChildren,
