@@ -18,6 +18,7 @@ import { Route as BaixarApkRouteImport } from './routes/baixar-apk'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PlaylistsIdRouteImport } from './routes/playlists.$id'
 import { Route as PlaylistsIdPreviewRouteImport } from './routes/playlists.$id.preview'
+import { Route as ApiPublicApkRouteImport } from './routes/api/public/apk'
 
 const PlaylistsRoute = PlaylistsRouteImport.update({
   id: '/playlists',
@@ -64,6 +65,11 @@ const PlaylistsIdPreviewRoute = PlaylistsIdPreviewRouteImport.update({
   path: '/preview',
   getParentRoute: () => PlaylistsIdRoute,
 } as any)
+const ApiPublicApkRoute = ApiPublicApkRouteImport.update({
+  id: '/api/public/apk',
+  path: '/api/public/apk',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -74,6 +80,7 @@ export interface FileRoutesByFullPath {
   '/player': typeof PlayerRoute
   '/playlists': typeof PlaylistsRouteWithChildren
   '/playlists/$id': typeof PlaylistsIdRouteWithChildren
+  '/api/public/apk': typeof ApiPublicApkRoute
   '/playlists/$id/preview': typeof PlaylistsIdPreviewRoute
 }
 export interface FileRoutesByTo {
@@ -85,6 +92,7 @@ export interface FileRoutesByTo {
   '/player': typeof PlayerRoute
   '/playlists': typeof PlaylistsRouteWithChildren
   '/playlists/$id': typeof PlaylistsIdRouteWithChildren
+  '/api/public/apk': typeof ApiPublicApkRoute
   '/playlists/$id/preview': typeof PlaylistsIdPreviewRoute
 }
 export interface FileRoutesById {
@@ -97,6 +105,7 @@ export interface FileRoutesById {
   '/player': typeof PlayerRoute
   '/playlists': typeof PlaylistsRouteWithChildren
   '/playlists/$id': typeof PlaylistsIdRouteWithChildren
+  '/api/public/apk': typeof ApiPublicApkRoute
   '/playlists/$id/preview': typeof PlaylistsIdPreviewRoute
 }
 export interface FileRouteTypes {
@@ -110,6 +119,7 @@ export interface FileRouteTypes {
     | '/player'
     | '/playlists'
     | '/playlists/$id'
+    | '/api/public/apk'
     | '/playlists/$id/preview'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -121,6 +131,7 @@ export interface FileRouteTypes {
     | '/player'
     | '/playlists'
     | '/playlists/$id'
+    | '/api/public/apk'
     | '/playlists/$id/preview'
   id:
     | '__root__'
@@ -132,6 +143,7 @@ export interface FileRouteTypes {
     | '/player'
     | '/playlists'
     | '/playlists/$id'
+    | '/api/public/apk'
     | '/playlists/$id/preview'
   fileRoutesById: FileRoutesById
 }
@@ -143,6 +155,7 @@ export interface RootRouteChildren {
   DispositivosRoute: typeof DispositivosRoute
   PlayerRoute: typeof PlayerRoute
   PlaylistsRoute: typeof PlaylistsRouteWithChildren
+  ApiPublicApkRoute: typeof ApiPublicApkRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -210,6 +223,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlaylistsIdPreviewRouteImport
       parentRoute: typeof PlaylistsIdRoute
     }
+    '/api/public/apk': {
+      id: '/api/public/apk'
+      path: '/api/public/apk'
+      fullPath: '/api/public/apk'
+      preLoaderRoute: typeof ApiPublicApkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -245,17 +265,8 @@ const rootRouteChildren: RootRouteChildren = {
   DispositivosRoute: DispositivosRoute,
   PlayerRoute: PlayerRoute,
   PlaylistsRoute: PlaylistsRouteWithChildren,
+  ApiPublicApkRoute: ApiPublicApkRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
