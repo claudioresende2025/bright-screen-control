@@ -1,0 +1,86 @@
+name: Build SignageHub Player APK
+
+# Compila o APK do player Android (pasta android-player/) e publica
+# em GitHub Releases a cada push em main. URL pública estável fica em:
+#   https://github.com/<user>/<repo>/releases/latest/download/signagehub-player.apk
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "android-player/**"
+      - ".github/workflows/build-apk.yml"
+  workflow_dispatch:
+    inputs:
+      player_url:
+        description: "URL completa do player web (opcional — sobrescreve strings.xml)"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android-player
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: "platforms;android-34 build-tools;34.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Override player URL (workflow_dispatch only)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.player_url != '' }}
+        run: |
+          sed -i "s|<string name=\"player_url\">.*</string>|<string name=\"player_url\">${{ inputs.player_url }}</string>|" app/src/main/res/values/strings.xml
+          echo "player_url overridden to: ${{ inputs.player_url }}"
+
+      - name: Generate Gradle wrapper
+        run: gradle wrapper --gradle-version 8.7
+
+      - name: Build debug APK
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Rename APK
+        run: |
+          mkdir -p ../dist
+          cp app/build/outputs/apk/debug/app-debug.apk ../dist/signagehub-player.apk
+
+      - name: Upload APK as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: signagehub-player-apk
+          path: dist/signagehub-player.apk
+          retention-days: 30
+
+      - name: Publish to GitHub Releases
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: SignageHub Player v1.0.${{ github.run_number }}
+          body: |
+            APK do player Android para Smart TVs / TV Box.
+
+            **Download direto (link estável):**
+            https://github.com/${{ github.repository }}/releases/latest/download/signagehub-player.apk
+
+            Cole esse link em **Configurações → URL pública do APK** no painel SignageHub.
+          files: ../dist/signagehub-player.apk
+          make_latest: "true"
