@@ -78,14 +78,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "SignageHub — Painel de Mídia Indoor" },
+      { title: "IndoorHub— Painel de Mídia Indoor" },
       { name: "description", content: "Painel administrativo para gerenciamento centralizado de TVs e playlists de Mídia Indoor." },
       { name: "author", content: "SignageHub" },
-      { property: "og:title", content: "SignageHub — Painel de Mídia Indoor" },
-      { property: "og:description", content: "Gerencie TVs, playlists e clientes em tempo real." },
+      { property: "og:title", content: "IndoorHub— Painel de Mídia Indoor" },
+      { property: "og:description", content: "Painel administrativo para gerenciamento centralizado de TVs e playlists de Mídia Indoor." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "IndoorHub— Painel de Mídia Indoor" },
+      { name: "twitter:description", content: "Painel administrativo para gerenciamento centralizado de TVs e playlists de Mídia Indoor." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/527538ef-f353-4d46-a9c0-d68bc854863e/id-preview-6a9b8c94--b794c8a2-0b80-40fd-af10-d45335f50172.lovable.app-1782242645404.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/527538ef-f353-4d46-a9c0-d68bc854863e/id-preview-6a9b8c94--b794c8a2-0b80-40fd-af10-d45335f50172.lovable.app-1782242645404.png" },
     ],
     links: [
       {
