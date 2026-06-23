@@ -1,37 +1,13 @@
 import { QRCodeSVG } from "qrcode.react";
-import { Tv, Wifi, Download, LayoutDashboard } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Tv, Wifi, LayoutDashboard } from "lucide-react";
 
 interface Props {
   codigo: string;
   painelUrl: string;
-  apkUrl: string;
 }
 
-export function PairingScreen({ codigo, painelUrl, apkUrl }: Props) {
+export function PairingScreen({ codigo, painelUrl }: Props) {
   const grupos = [codigo.slice(0, 3), codigo.slice(3, 6)];
-  const [qrIndex, setQrIndex] = useState(0);
-
-  useEffect(() => {
-    const t = setInterval(() => setQrIndex((i) => (i + 1) % 2), 6000);
-    return () => clearInterval(t);
-  }, []);
-
-  const qrs = [
-    {
-      label: "Baixar APK na TV",
-      hint: "Escaneie para instalar o player",
-      value: apkUrl,
-      Icon: Download,
-    },
-    {
-      label: "Abrir painel admin",
-      hint: "Escaneie para abrir o painel",
-      value: painelUrl,
-      Icon: LayoutDashboard,
-    },
-  ];
-  const active = qrs[qrIndex];
 
   return (
     <div className="absolute inset-0 bg-black text-white grid place-items-center px-4 sm:px-8 overflow-y-auto py-8">
@@ -84,25 +60,15 @@ export function PairingScreen({ codigo, painelUrl, apkUrl }: Props) {
 
         <div className="flex flex-col items-center gap-3 bg-white/5 border border-white/10 rounded-2xl p-4 sm:p-5 backdrop-blur w-full max-w-[220px]">
           <div className="flex items-center gap-2 text-white/80 text-xs uppercase tracking-wider">
-            <active.Icon className="h-3.5 w-3.5 text-primary" />
-            {active.label}
+            <LayoutDashboard className="h-3.5 w-3.5 text-primary" />
+            Abrir painel admin
           </div>
-          <div className="rounded-xl bg-white p-3 transition-opacity duration-500" key={qrIndex}>
-            <QRCodeSVG value={active.value} size={140} />
+          <div className="rounded-xl bg-white p-3">
+            <QRCodeSVG value={painelUrl} size={140} />
           </div>
-          <p className="text-xs text-white/60 text-center max-w-[180px]">{active.hint}</p>
-          <div className="flex items-center gap-1.5 mt-1">
-            {qrs.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setQrIndex(i)}
-                aria-label={`QR ${i + 1}`}
-                className={`h-1.5 rounded-full transition-all ${
-                  i === qrIndex ? "w-6 bg-primary" : "w-1.5 bg-white/30"
-                }`}
-              />
-            ))}
-          </div>
+          <p className="text-xs text-white/60 text-center max-w-[180px]">
+            Escaneie para abrir o painel e vincular esta TV
+          </p>
         </div>
       </div>
     </div>

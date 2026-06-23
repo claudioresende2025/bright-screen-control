@@ -65,8 +65,9 @@ function ConfiguracoesPage() {
             <Smartphone className="h-5 w-5 text-primary" /> Player Android (APK)
           </CardTitle>
           <CardDescription>
-            Defina a URL pública do APK do player. O QR code exibido na tela de pareamento das TVs vai
-            redirecionar automaticamente para esse link, iniciando o download.
+            Cole aqui o link público do arquivo <code>.apk</code> (GitHub Releases, Google Drive
+            <code> uc?export=download&amp;id=…</code>, Dropbox <code>?dl=1</code>, S3, R2). Esse link
+            é usado pelo botão <strong>Baixar APK</strong> na página de Dispositivos.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
