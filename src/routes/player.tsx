@@ -76,14 +76,13 @@ function PlayerRoute() {
 
   const origin = mounted && typeof window !== "undefined" ? window.location.origin : "";
   const painelUrl = origin + "/dispositivos";
-  const apkUrl = origin + "/baixar-apk";
 
   return (
     <div className="fixed inset-0 bg-black text-white overflow-hidden">
       {!mounted || !codigo ? (
         <div className="absolute inset-0 grid place-items-center text-white/40">Iniciando…</div>
       ) : !dispositivo ? (
-        <PairingScreen codigo={codigo} painelUrl={painelUrl} apkUrl={apkUrl} />
+        <PairingScreen codigo={codigo} painelUrl={painelUrl} />
       ) : !dispositivo.playlist_id ? (
         <div className="absolute inset-0 grid place-items-center text-center px-8">
           <div>
