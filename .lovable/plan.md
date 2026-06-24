@@ -1,36 +1,44 @@
+## Diagnóstico
+
+Há dois problemas separados:
+
+1. **Upload da playlist**
+   - O upload atual salva uma URL assinada muito longa no banco e depende do usuário confirmar um preview antes de enviar.
+   - Isso torna o fluxo frágil para TV/WebView e pode deixar a impressão de que “clicar para upload não faz nada”, principalmente em mobile ou quando o preview não abre/metadata do vídeo não carrega.
+   - A playlist também pode aparecer como “não encontrada” logo após abrir porque a página lê o estado antes da hidratação inicial terminar.
+
+2. **APK/WebView**
+   - A URL `/player` responde no navegador, mas o APK pode falhar por compatibilidade do WebView com recursos modernos do bundle publicado, scripts auxiliares injetados e/ou por carregar HTML/JS moderno em WebViews antigos.
+   - Limpar cache sozinho não resolve se o WebView instalado no celular/TV for antigo.
+
 ## Plano de correção
 
-### 1. Corrigir navegação da página Playlists
+### 1. Tornar a tela de playlist resiliente
+- Adicionar estado de carregamento no `DataProvider`.
+- Na rota `/playlists/$id`, mostrar “Carregando playlist…” enquanto os dados iniciais ainda estão sendo carregados.
+- Só mostrar “Playlist não encontrada” depois que a hidratação terminar.
 
-- Ajustar o card da playlist para usar navegação programática e evitar que componentes internos/camadas de UI impeçam o clique.
-- Após criar uma nova playlist, redirecionar automaticamente para a tela de edição da playlist criada.
-- Adicionar tratamento de erro visível no botão de criação, em vez de fechar o modal mesmo se a criação falhar.
+### 2. Corrigir o upload para funcionar de forma direta
+- Alterar o upload para:
+  - aceitar imagens e vídeos por MIME e extensão;
+  - enviar imediatamente após selecionar/arrastar o arquivo, sem depender obrigatoriamente do preview;
+  - mostrar erro visível se storage ou banco falharem;
+  - suportar múltiplos arquivos em fila;
+  - limpar o input para permitir reenviar o mesmo arquivo.
+- Salvar no banco o **path do arquivo no storage** e não apenas uma URL assinada expirada/frágil.
+- Gerar URL assinada fresca no carregamento/reprodução quando necessário.
 
-### 2. Corrigir upload de vídeos/imagens
+### 3. Ajustar reprodução para TV
+- Resolver URLs de mídia no `PlaybackEngine` antes de renderizar `<img>`/`<video>`.
+- Se uma mídia não carregar na TV, exibir um fallback claro e avançar para a próxima, em vez de ficar parada.
 
-- Revisar o fluxo `UploadDropzone -> Storage -> midias` para expor erro real quando o upload falhar.
-- Aceitar formatos comuns de imagem/vídeo de forma mais robusta (`jpg`, `jpeg`, `png`, `webp`, `gif`, `mp4`, `webm`, `mov`).
-- Permitir seleção múltipla de arquivos de verdade: processar fila de arquivos, não só o primeiro arquivo selecionado.
-- Limpar o input após seleção para permitir reenviar o mesmo arquivo.
-- Validar se o bucket/registro falhou e manter a playlist aberta para nova tentativa.
+### 4. Corrigir APK para WebView antigo
+- Ajustar o APK para usar User-Agent Android/WebView padrão, sem sufixo customizado que pode interferir no host.
+- Adicionar configurações de compatibilidade do WebView: database/storage, autoplay, mixed content seguro, zoom desativado, viewport estável.
+- Melhorar a tela de erro mostrando URL real, código HTTP quando disponível e botão de tentar novamente.
+- Remover cache-busting agressivo se ele quebrar navegação/cache de assets; manter limpeza controlada no primeiro carregamento.
+- Subir `versionCode/versionName` para forçar instalação da nova versão.
 
-### 3. Corrigir o APK/WebView
-
-- O erro do anexo é a página do host dizendo que os arquivos publicados estão ausentes; no navegador a rota atual responde 200, então o APK pode estar carregando um build antigo/cacheado ou uma resposta hospedada anterior.
-- Atualizar o APK para forçar carregamento limpo do `/player`: limpar cache/cookies do WebView na inicialização, usar `LOAD_NO_CACHE`, desabilitar cache de DOM onde aplicável e recarregar a URL pública correta.
-- Melhorar o tratamento de erros para mostrar a URL realmente carregada, código HTTP quando houver e um botão/toque para tentar novamente.
-- Incrementar `versionCode/versionName` para garantir que o celular/TV instale a nova versão por cima.
-
-### 4. Validação
-
-- Testar via browser local a criação de playlist, clique no card e abertura da tela de upload.
-- Validar que a URL publicada do player responde corretamente.
-- Verificar que a configuração do Android aponta para `https://bright-screen-control.lovable.app/player` e que o novo APK não reutiliza cache antigo.
-
-### Observação importante
-
-Depois da correção do código, será necessário gerar/publicar um novo APK e reinstalar no celular/TV. O APK já instalado não muda automaticamente.
-
-&nbsp;
-
-Me enviar a URL atualizada para o novo download do APK.
+### 5. Publicação/geração do APK
+- Garantir que o workflow gere o APK novo com a URL correta `https://bright-screen-control.lovable.app/player`.
+- Após implementar, será necessário **publicar/atualizar o app web** e **baixar/reinstalar o novo APK** no celular/TV.
