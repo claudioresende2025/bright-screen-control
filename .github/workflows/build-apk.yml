@@ -62,11 +62,16 @@ jobs:
           mkdir -p ../dist
           cp app/build/outputs/apk/debug/app-debug.apk ../dist/signagehub-player.apk
 
+      - name: Verify APK exists
+        run: |
+          ls -lh ../dist/signagehub-player.apk
+          test -s ../dist/signagehub-player.apk
+
       - name: Upload APK as workflow artifact
         uses: actions/upload-artifact@v4
         with:
           name: signagehub-player-apk
-          path: dist/signagehub-player.apk
+          path: ../dist/signagehub-player.apk
           retention-days: 30
 
       - name: Publish to GitHub Releases
@@ -84,3 +89,4 @@ jobs:
             Cole esse link em **Configurações → URL pública do APK** no painel SignageHub.
           files: dist/signagehub-player.apk
           make_latest: "true"
+          fail_on_unmatched_files: true

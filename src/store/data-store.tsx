@@ -259,7 +259,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const saved = localStorage.getItem("signagehub_apk_url");
-    if (saved) setApkDownloadUrlState(saved);
+    if (!saved) return;
+    // Migrate old pinned-version URLs (e.g. .../download/v1.0.1/...) that may
+    // 404 if the release has no asset. Force the stable "latest" link.
+    const migrated = saved.replace(
+      /\/releases\/download\/v[\d.]+\/signagehub-player\.apk$/,
+      "/releases/latest/download/signagehub-player.apk",
+    );
+    if (migrated !== saved) {
+      localStorage.setItem("signagehub_apk_url", migrated);
+    }
+    setApkDownloadUrlState(migrated);
   }, []);
 
   const setApkDownloadUrl = useCallback((url: string) => {
