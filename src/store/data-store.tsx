@@ -92,6 +92,7 @@ interface DataCtx {
   playlists: Playlist[];
   midias: MidiaPlaylist[];
   pendingPlayers: PendingPlayer[];
+  hydrated: boolean;
 
   criarCliente: (data: Omit<Cliente, "id" | "criado_em">) => Promise<Cliente>;
   atualizarCliente: (id: string, data: Partial<Cliente>) => Promise<void>;
