@@ -9,6 +9,10 @@ import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.webkit.WebResourceError
+import android.webkit.WebResourceRequest
+import android.os.Handler
+import android.os.Looper
 import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
@@ -36,7 +40,31 @@ class MainActivity : AppCompatActivity() {
                     safeBrowsingEnabled = true
                 }
             }
-            webViewClient = WebViewClient()
+            webViewClient = object : WebViewClient() {
+                override fun onReceivedError(
+                    view: WebView,
+                    request: WebResourceRequest,
+                    error: WebResourceError
+                ) {
+                    if (!request.isForMainFrame) return
+                    val url = getString(R.string.player_url)
+                    val msg = "Falha ao carregar: ${error.description} (${error.errorCode})"
+                    val html = """
+                        <html><body style='background:#000;color:#fff;font-family:sans-serif;
+                          display:flex;flex-direction:column;align-items:center;justify-content:center;
+                          height:100vh;text-align:center;padding:24px;'>
+                          <h2 style='margin:0 0 12px 0'>SignageHub Player</h2>
+                          <p style='opacity:.8;margin:0 0 8px 0'>$msg</p>
+                          <p style='opacity:.6;font-size:13px;word-break:break-all'>$url</p>
+                          <p style='opacity:.5;font-size:12px;margin-top:24px'>Tentando novamente em 10s…</p>
+                        </body></html>
+                    """.trimIndent()
+                    view.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
+                    Handler(Looper.getMainLooper()).postDelayed({
+                        view.loadUrl(url)
+                    }, 10_000)
+                }
+            }
             webChromeClient = WebChromeClient()
             setBackgroundColor(android.graphics.Color.BLACK)
         }
