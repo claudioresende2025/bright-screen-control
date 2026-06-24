@@ -24,11 +24,19 @@ export const Route = createFileRoute("/playlists/$id")({
 function PlaylistEditor() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
-  const { playlists, midias, dispositivos, renomearPlaylist, removerPlaylist } = useData();
+  const { playlists, midias, dispositivos, renomearPlaylist, removerPlaylist, hydrated } = useData();
   const playlist = playlists.find((p) => p.id === id);
 
   const [editingName, setEditingName] = useState(false);
   const [nome, setNome] = useState(playlist?.nome_playlist ?? "");
+
+  if (!hydrated) {
+    return (
+      <div className="p-8 max-w-[1400px] mx-auto text-center text-muted-foreground">
+        Carregando playlist…
+      </div>
+    );
+  }
 
   if (!playlist) {
     return (
