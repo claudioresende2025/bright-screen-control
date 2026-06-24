@@ -11,6 +11,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.CookieManager
 import android.os.Handler
 import android.os.Looper
 import androidx.appcompat.app.AppCompatActivity
@@ -31,19 +32,25 @@ class MainActivity : AppCompatActivity() {
                 javaScriptEnabled = true
                 domStorageEnabled = true
                 mediaPlaybackRequiresUserGesture = false
-                cacheMode = WebSettings.LOAD_DEFAULT
+                // Forçar sempre buscar do servidor: evita ficar preso em
+                // builds antigos do painel publicado.
+                cacheMode = WebSettings.LOAD_NO_CACHE
                 useWideViewPort = true
                 loadWithOverviewMode = true
                 allowFileAccess = false
                 allowContentAccess = false
-                // Algumas TV Box antigas falham servindo recursos misturados; permitir compatibilidade.
                 mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-                // Identificar requisições do APK nos logs / analytics.
                 userAgentString = userAgentString + " SignageHubPlayer/1.0 (AndroidTV)"
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     safeBrowsingEnabled = true
                 }
             }
+            // Limpar cache antigo do WebView ao iniciar — garante que o
+            // app pegue a última versão publicada do /player.
+            clearCache(true)
+            clearHistory()
+            CookieManager.getInstance().removeAllCookies(null)
+            CookieManager.getInstance().flush()
             webViewClient = object : WebViewClient() {
                 override fun onReceivedError(
                     view: WebView,
@@ -52,6 +59,7 @@ class MainActivity : AppCompatActivity() {
                 ) {
                     if (!request.isForMainFrame) return
                     val url = getString(R.string.player_url)
+                    val failedUrl = request.url?.toString() ?: url
                     val msg = "Falha ao carregar: ${error.description} (código ${error.errorCode})"
                     val html = """
                         <html><body style='background:#000;color:#fff;font-family:sans-serif;
@@ -59,7 +67,7 @@ class MainActivity : AppCompatActivity() {
                           height:100vh;text-align:center;padding:24px;'>
                           <h2 style='margin:0 0 12px 0'>SignageHub Player</h2>
                           <p style='opacity:.8;margin:0 0 8px 0'>$msg</p>
-                          <p style='opacity:.6;font-size:13px;word-break:break-all'>$url</p>
+                          <p style='opacity:.6;font-size:13px;word-break:break-all'>$failedUrl</p>
                           <p style='opacity:.6;font-size:13px;margin-top:16px'>
                             Para testar, abra a mesma URL no navegador do celular.
                           </p>
@@ -68,6 +76,7 @@ class MainActivity : AppCompatActivity() {
                     """.trimIndent()
                     view.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
                     Handler(Looper.getMainLooper()).postDelayed({
+                        view.clearCache(true)
                         view.loadUrl(url)
                     }, 10_000)
                 }
@@ -79,7 +88,11 @@ class MainActivity : AppCompatActivity() {
         setContentView(webView)
         enterImmersiveMode()
 
-        webView.loadUrl(getString(R.string.player_url))
+        // Cache-bust: força o host a entregar o build mais recente,
+        // evitando que o WebView fique preso em uma resposta antiga.
+        val base = getString(R.string.player_url)
+        val sep = if (base.contains("?")) "&" else "?"
+        webView.loadUrl("$base${sep}v=${System.currentTimeMillis()}")
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
