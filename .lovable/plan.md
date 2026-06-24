@@ -1,50 +1,15 @@
-## Diagnóstico
+O 404 continua porque a URL testada aponta para `.../releases/download/v1.0.1/signagehub-player.apk`, e essa release já foi criada sem asset. A correção anterior só faz o próximo workflow anexar o APK em uma nova release; ela não preenche a `v1.0.1` existente.
 
-O build rodou verde (3m 40s) e o release `v1.0.1` foi criado — mas está **sem nenhum asset** (`"assets": []` confirmado via API do GitHub). Por isso a URL `releases/latest/download/signagehub-player.apk` retorna 404.
+Plano:
+1. Ajustar o workflow para falhar explicitamente se o APK não existir antes de publicar a release.
+   - Adicionar uma etapa de verificação logo após copiar o APK para `dist/signagehub-player.apk`.
+   - Adicionar `fail_on_unmatched_files: true` no `softprops/action-gh-release`.
+2. Corrigir o upload de artifact para usar o caminho correto dentro do job com `working-directory: android-player`.
+   - O artifact deve apontar para `../dist/signagehub-player.apk`.
+   - A release deve continuar usando `dist/signagehub-player.apk`, pois action `uses` roda da raiz do repositório.
+3. Atualizar a URL padrão do painel para usar somente o link estável `releases/latest/download/signagehub-player.apk`, não uma versão fixa.
+   - Se o navegador tiver salvo localmente a URL antiga `v1.0.1`, o usuário precisará limpar/salvar novamente no painel ou eu posso ajustar o código para trocar automaticamente URLs antigas por `latest`.
+4. Depois que esta alteração sincronizar com o GitHub, o push deve disparar o workflow e criar uma nova release com APK anexado. A URL correta para testar será:
+   `https://github.com/claudioresende2025/bright-screen-control/releases/latest/download/signagehub-player.apk`
 
-**Causa:** mismatch de diretório de trabalho no `.github/workflows/build-apk.yml`.
-
-- O job define `defaults.run.working-directory: android-player`, então o passo "Rename APK" copia o APK para `../dist/signagehub-player.apk` (= `dist/` na raiz do repo). ✅
-- Mas a action `softprops/action-gh-release@v2` **não** herda esse `working-directory` — ela roda a partir da raiz do repo. O caminho `../dist/signagehub-player.apk` resolve para **fora** do repositório, o glob não casa com nada, e o release é publicado vazio sem falhar o job.
-
-O APK foi gerado corretamente (já está disponível como **artifact** da workflow run), só não foi anexado ao Release.
-
-## Correção
-
-Em `.github/workflows/build-apk.yml`, ajustar apenas o passo final:
-
-```yaml
-- name: Publish to GitHub Releases
-  if: github.ref == 'refs/heads/main'
-  uses: softprops/action-gh-release@v2
-  with:
-    tag_name: v1.0.${{ github.run_number }}
-    name: SignageHub Player v1.0.${{ github.run_number }}
-    body: |
-      APK do player Android para Smart TVs / TV Box.
-
-      **Download direto (link estável):**
-      https://github.com/${{ github.repository }}/releases/latest/download/signagehub-player.apk
-
-      Cole esse link em **Configurações → URL pública do APK** no painel SignageHub.
-    files: dist/signagehub-player.apk   # ← era ../dist/...
-    make_latest: "true"
-```
-
-Mudança única: `../dist/signagehub-player.apk` → `dist/signagehub-player.apk`.
-
-## Passos após aprovar
-
-1. Eu aplico a alteração no arquivo do workflow.
-2. Como o `on: push` filtra `paths: android-player/** | .github/workflows/build-apk.yml`, o próprio commit dispara a build automaticamente (não precisa "Run workflow" manual desta vez).
-3. Aguardar ~5 min. Build verde → novo release `v1.0.2` com o APK anexado.
-4. Testar em aba anônima:
-   ```
-   https://github.com/claudioresende2025/bright-screen-control/releases/latest/download/signagehub-player.apk
-   ```
-   Deve baixar direto.
-5. O campo "URL pública do APK" em `/configuracoes` já está com essa URL por padrão (`DEFAULT_APK_URL` em `src/store/data-store.tsx`), então o botão "Baixar APK" em `/dispositivos` e o QR Code passam a funcionar sem mexer no painel.
-
-## Observação
-
-Não vou tocar no release `v1.0.1` atual (conforme sua escolha). Ele fica vazio mas inofensivo — `releases/latest/download/...` vai apontar para o `v1.0.2` assim que a próxima run terminar com `make_latest: true`.
+Observação: o link fixo `.../download/v1.0.1/...` continuará 404 enquanto a release `v1.0.1` não receber o asset manualmente. Como você escolheu “Apenas workflow”, o caminho esperado é gerar uma nova release correta, não consertar a release antiga.
