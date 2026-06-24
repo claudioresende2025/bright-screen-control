@@ -36,6 +36,10 @@ class MainActivity : AppCompatActivity() {
                 loadWithOverviewMode = true
                 allowFileAccess = false
                 allowContentAccess = false
+                // Algumas TV Box antigas falham servindo recursos misturados; permitir compatibilidade.
+                mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+                // Identificar requisições do APK nos logs / analytics.
+                userAgentString = userAgentString + " SignageHubPlayer/1.0 (AndroidTV)"
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     safeBrowsingEnabled = true
                 }
@@ -48,7 +52,7 @@ class MainActivity : AppCompatActivity() {
                 ) {
                     if (!request.isForMainFrame) return
                     val url = getString(R.string.player_url)
-                    val msg = "Falha ao carregar: ${error.description} (${error.errorCode})"
+                    val msg = "Falha ao carregar: ${error.description} (código ${error.errorCode})"
                     val html = """
                         <html><body style='background:#000;color:#fff;font-family:sans-serif;
                           display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -56,6 +60,9 @@ class MainActivity : AppCompatActivity() {
                           <h2 style='margin:0 0 12px 0'>SignageHub Player</h2>
                           <p style='opacity:.8;margin:0 0 8px 0'>$msg</p>
                           <p style='opacity:.6;font-size:13px;word-break:break-all'>$url</p>
+                          <p style='opacity:.6;font-size:13px;margin-top:16px'>
+                            Para testar, abra a mesma URL no navegador do celular.
+                          </p>
                           <p style='opacity:.5;font-size:12px;margin-top:24px'>Tentando novamente em 10s…</p>
                         </body></html>
                     """.trimIndent()
