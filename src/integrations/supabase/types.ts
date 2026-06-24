@@ -14,7 +14,176 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      app_config: {
+        Row: {
+          atualizado_em: string
+          key: string
+          value: string
+        }
+        Insert: {
+          atualizado_em?: string
+          key: string
+          value?: string
+        }
+        Update: {
+          atualizado_em?: string
+          key?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      clientes: {
+        Row: {
+          contato: string
+          criado_em: string
+          id: string
+          nome_estabelecimento: string
+        }
+        Insert: {
+          contato?: string
+          criado_em?: string
+          id?: string
+          nome_estabelecimento: string
+        }
+        Update: {
+          contato?: string
+          criado_em?: string
+          id?: string
+          nome_estabelecimento?: string
+        }
+        Relationships: []
+      }
+      dispositivos: {
+        Row: {
+          cliente_id: string
+          codigo_vinculo: string
+          criado_em: string
+          device_local_id: string | null
+          id: string
+          nome_tela: string
+          playlist_id: string | null
+          status_online: boolean
+          ultima_sincronizacao: string
+        }
+        Insert: {
+          cliente_id: string
+          codigo_vinculo: string
+          criado_em?: string
+          device_local_id?: string | null
+          id?: string
+          nome_tela: string
+          playlist_id?: string | null
+          status_online?: boolean
+          ultima_sincronizacao?: string
+        }
+        Update: {
+          cliente_id?: string
+          codigo_vinculo?: string
+          criado_em?: string
+          device_local_id?: string | null
+          id?: string
+          nome_tela?: string
+          playlist_id?: string | null
+          status_online?: boolean
+          ultima_sincronizacao?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dispositivos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dispositivos_playlist_id_fkey"
+            columns: ["playlist_id"]
+            isOneToOne: false
+            referencedRelation: "playlists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      midias: {
+        Row: {
+          criado_em: string
+          duracao_segundos: number
+          id: string
+          nome_arquivo: string
+          ordem_exibicao: number
+          playlist_id: string
+          tamanho_bytes: number
+          tipo_midia: string
+          url_arquivo: string
+        }
+        Insert: {
+          criado_em?: string
+          duracao_segundos?: number
+          id?: string
+          nome_arquivo: string
+          ordem_exibicao?: number
+          playlist_id: string
+          tamanho_bytes?: number
+          tipo_midia: string
+          url_arquivo: string
+        }
+        Update: {
+          criado_em?: string
+          duracao_segundos?: number
+          id?: string
+          nome_arquivo?: string
+          ordem_exibicao?: number
+          playlist_id?: string
+          tamanho_bytes?: number
+          tipo_midia?: string
+          url_arquivo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "midias_playlist_id_fkey"
+            columns: ["playlist_id"]
+            isOneToOne: false
+            referencedRelation: "playlists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pending_players: {
+        Row: {
+          codigo: string
+          criado_em: string
+          device_local_id: string
+        }
+        Insert: {
+          codigo: string
+          criado_em?: string
+          device_local_id: string
+        }
+        Update: {
+          codigo?: string
+          criado_em?: string
+          device_local_id?: string
+        }
+        Relationships: []
+      }
+      playlists: {
+        Row: {
+          criado_em: string
+          id: string
+          nome_playlist: string
+        }
+        Insert: {
+          criado_em?: string
+          id?: string
+          nome_playlist: string
+        }
+        Update: {
+          criado_em?: string
+          id?: string
+          nome_playlist?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
