@@ -136,8 +136,6 @@ interface DataCtx {
 
 const Ctx = createContext<DataCtx | null>(null);
 
-const delay = (ms = 120) => new Promise((r) => setTimeout(r, ms));
-
 export function DataProvider({ children }: { children: ReactNode }) {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [dispositivos, setDispositivos] = useState<Dispositivo[]>([]);
