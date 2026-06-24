@@ -15,182 +15,75 @@ import type {
   Playlist,
   TipoMidia,
 } from "../types/database";
+import { supabase } from "@/integrations/supabase/client";
 
-function uid(prefix: string) {
-  return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
-}
+const APK_CONFIG_KEY = "apk_download_url";
+const DEFAULT_APK_URL =
+  "https://github.com/claudioresende2025/bright-screen-control/releases/latest/download/signagehub-player.apk";
 
-function nowISO(offsetMs = 0) {
-  return new Date(Date.now() - offsetMs).toISOString();
-}
+type DbCliente = {
+  id: string;
+  nome_estabelecimento: string;
+  contato: string;
+  criado_em: string;
+};
+type DbPlaylist = { id: string; nome_playlist: string; criado_em: string };
+type DbDispositivo = {
+  id: string;
+  cliente_id: string;
+  nome_tela: string;
+  codigo_vinculo: string;
+  playlist_id: string | null;
+  status_online: boolean;
+  ultima_sincronizacao: string;
+};
+type DbMidia = {
+  id: string;
+  playlist_id: string;
+  url_arquivo: string;
+  tipo_midia: string;
+  nome_arquivo: string;
+  tamanho_bytes: number;
+  duracao_segundos: number;
+  ordem_exibicao: number;
+};
+type DbPending = { codigo: string; device_local_id: string; criado_em: string };
 
-// ---------- Seed ----------
-const cli1 = "cli_supermercado";
-const cli2 = "cli_academia";
-const cli3 = "cli_clinica";
-
-const pl1 = "pl_promocoes";
-const pl2 = "pl_institucional";
-
-const seedClientes: Cliente[] = [
-  {
-    id: cli1,
-    nome_estabelecimento: "Supermercado Bom Preço",
-    contato: "contato@bompreco.com.br",
-    criado_em: nowISO(1000 * 60 * 60 * 24 * 30),
-  },
-  {
-    id: cli2,
-    nome_estabelecimento: "Academia Fit Center",
-    contato: "gerencia@fitcenter.com.br",
-    criado_em: nowISO(1000 * 60 * 60 * 24 * 20),
-  },
-  {
-    id: cli3,
-    nome_estabelecimento: "Clínica Vida Saudável",
-    contato: "recepcao@vidasaudavel.com.br",
-    criado_em: nowISO(1000 * 60 * 60 * 24 * 12),
-  },
-];
-
-const seedPlaylists: Playlist[] = [
-  { id: pl1, nome_playlist: "Promoções da Semana", criado_em: nowISO(1000 * 60 * 60 * 24 * 10) },
-  { id: pl2, nome_playlist: "Institucional Geral", criado_em: nowISO(1000 * 60 * 60 * 24 * 6) },
-];
-
-const seedDispositivos: Dispositivo[] = [
-  {
-    id: uid("dev"),
-    cliente_id: cli1,
-    nome_tela: "Entrada Principal",
-    codigo_vinculo: "482193",
-    playlist_id: pl1,
-    status_online: true,
-    ultima_sincronizacao: nowISO(1000 * 60 * 2),
-  },
-  {
-    id: uid("dev"),
-    cliente_id: cli1,
-    nome_tela: "Corredor de Caixas",
-    codigo_vinculo: "739204",
-    playlist_id: pl1,
-    status_online: true,
-    ultima_sincronizacao: nowISO(1000 * 60 * 4),
-  },
-  {
-    id: uid("dev"),
-    cliente_id: cli2,
-    nome_tela: "Tela Principal — Recepção",
-    codigo_vinculo: "118827",
-    playlist_id: pl2,
-    status_online: true,
-    ultima_sincronizacao: nowISO(1000 * 60),
-  },
-  {
-    id: uid("dev"),
-    cliente_id: cli2,
-    nome_tela: "Sala de Musculação",
-    codigo_vinculo: "560341",
-    playlist_id: pl2,
-    status_online: false,
-    ultima_sincronizacao: nowISO(1000 * 60 * 47),
-  },
-  {
-    id: uid("dev"),
-    cliente_id: cli3,
-    nome_tela: "Sala de Espera",
-    codigo_vinculo: "904756",
-    playlist_id: pl2,
-    status_online: true,
-    ultima_sincronizacao: nowISO(1000 * 60 * 7),
-  },
-];
-
-const img = (id: number) => `https://picsum.photos/seed/sig${id}/600/400`;
-const vid = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4";
-
-const seedMidias: MidiaPlaylist[] = [
-  {
-    id: uid("md"),
-    playlist_id: pl1,
-    url_arquivo: img(11),
-    tipo_midia: "image",
-    duracao_segundos: 10,
-    ordem_exibicao: 1,
-    nome_arquivo: "promo-frutas.jpg",
-    tamanho_bytes: 412_300,
-  },
-  {
-    id: uid("md"),
-    playlist_id: pl1,
-    url_arquivo: img(12),
-    tipo_midia: "image",
-    duracao_segundos: 8,
-    ordem_exibicao: 2,
-    nome_arquivo: "promo-acougue.jpg",
-    tamanho_bytes: 388_120,
-  },
-  {
-    id: uid("md"),
-    playlist_id: pl1,
-    url_arquivo: img(13),
-    tipo_midia: "image",
-    duracao_segundos: 12,
-    ordem_exibicao: 3,
-    nome_arquivo: "promo-bebidas.png",
-    tamanho_bytes: 524_000,
-  },
-  {
-    id: uid("md"),
-    playlist_id: pl1,
-    url_arquivo: vid,
-    tipo_midia: "video",
-    duracao_segundos: 32,
-    ordem_exibicao: 4,
-    nome_arquivo: "spot-ofertas.mp4",
-    tamanho_bytes: 4_812_000,
-  },
-  {
-    id: uid("md"),
-    playlist_id: pl2,
-    url_arquivo: vid,
-    tipo_midia: "video",
-    duracao_segundos: 45,
-    ordem_exibicao: 1,
-    nome_arquivo: "institucional-abertura.mp4",
-    tamanho_bytes: 6_200_000,
-  },
-  {
-    id: uid("md"),
-    playlist_id: pl2,
-    url_arquivo: img(21),
-    tipo_midia: "image",
-    duracao_segundos: 10,
-    ordem_exibicao: 2,
-    nome_arquivo: "valores.jpg",
-    tamanho_bytes: 298_400,
-  },
-  {
-    id: uid("md"),
-    playlist_id: pl2,
-    url_arquivo: img(22),
-    tipo_midia: "image",
-    duracao_segundos: 10,
-    ordem_exibicao: 3,
-    nome_arquivo: "equipe.jpg",
-    tamanho_bytes: 312_900,
-  },
-  {
-    id: uid("md"),
-    playlist_id: pl2,
-    url_arquivo: vid,
-    tipo_midia: "video",
-    duracao_segundos: 28,
-    ordem_exibicao: 4,
-    nome_arquivo: "depoimento-cliente.mp4",
-    tamanho_bytes: 5_120_000,
-  },
-];
+const mapCliente = (r: DbCliente): Cliente => ({
+  id: r.id,
+  nome_estabelecimento: r.nome_estabelecimento,
+  contato: r.contato ?? "",
+  criado_em: r.criado_em,
+});
+const mapPlaylist = (r: DbPlaylist): Playlist => ({
+  id: r.id,
+  nome_playlist: r.nome_playlist,
+  criado_em: r.criado_em,
+});
+const mapDispositivo = (r: DbDispositivo): Dispositivo => ({
+  id: r.id,
+  cliente_id: r.cliente_id,
+  nome_tela: r.nome_tela,
+  codigo_vinculo: r.codigo_vinculo,
+  playlist_id: r.playlist_id,
+  status_online: r.status_online,
+  ultima_sincronizacao: r.ultima_sincronizacao,
+});
+const mapMidia = (r: DbMidia): MidiaPlaylist => ({
+  id: r.id,
+  playlist_id: r.playlist_id,
+  url_arquivo: r.url_arquivo,
+  tipo_midia: (r.tipo_midia === "video" ? "video" : "image") as TipoMidia,
+  nome_arquivo: r.nome_arquivo,
+  tamanho_bytes: Number(r.tamanho_bytes ?? 0),
+  duracao_segundos: r.duracao_segundos,
+  ordem_exibicao: r.ordem_exibicao,
+});
+const mapPending = (r: DbPending): PendingPlayer => ({
+  codigo: r.codigo,
+  device_local_id: r.device_local_id,
+  criado_em: r.criado_em,
+});
 
 // ---------- Context ----------
 interface DataCtx {
@@ -243,121 +136,208 @@ interface DataCtx {
 
 const Ctx = createContext<DataCtx | null>(null);
 
-const delay = (ms = 120) => new Promise((r) => setTimeout(r, ms));
-
 export function DataProvider({ children }: { children: ReactNode }) {
-  const [clientes, setClientes] = useState<Cliente[]>(seedClientes);
-  const [dispositivos, setDispositivos] = useState<Dispositivo[]>(seedDispositivos);
-  const [playlists, setPlaylists] = useState<Playlist[]>(seedPlaylists);
-  const [midias, setMidias] = useState<MidiaPlaylist[]>(seedMidias);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [dispositivos, setDispositivos] = useState<Dispositivo[]>([]);
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [midias, setMidias] = useState<MidiaPlaylist[]>([]);
   const [pendingPlayers, setPendingPlayers] = useState<PendingPlayer[]>([]);
-  const DEFAULT_APK_URL =
-    "https://github.com/claudioresende2025/bright-screen-control/releases/latest/download/signagehub-player.apk";
   const [apkDownloadUrl, setApkDownloadUrlState] = useState<string>(DEFAULT_APK_URL);
 
-  // Hydrate APK url from localStorage on mount
+  // ---------- Hydrate + Realtime ----------
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const saved = localStorage.getItem("signagehub_apk_url");
-    if (!saved) return;
-    // Migrate old pinned-version URLs (e.g. .../download/v1.0.1/...) that may
-    // 404 if the release has no asset. Force the stable "latest" link.
-    const migrated = saved.replace(
-      /\/releases\/download\/v[\d.]+\/signagehub-player\.apk$/,
-      "/releases/latest/download/signagehub-player.apk",
-    );
-    if (migrated !== saved) {
-      localStorage.setItem("signagehub_apk_url", migrated);
-    }
-    setApkDownloadUrlState(migrated);
+    let active = true;
+
+    (async () => {
+      const [cli, pls, mid, disp, pend, cfg] = await Promise.all([
+        supabase.from("clientes").select("*").order("criado_em", { ascending: true }),
+        supabase.from("playlists").select("*").order("criado_em", { ascending: true }),
+        supabase.from("midias").select("*"),
+        supabase.from("dispositivos").select("*"),
+        supabase.from("pending_players").select("*"),
+        supabase.from("app_config").select("*").eq("key", APK_CONFIG_KEY).maybeSingle(),
+      ]);
+      if (!active) return;
+      if (cli.data) setClientes(cli.data.map(mapCliente));
+      if (pls.data) setPlaylists(pls.data.map(mapPlaylist));
+      if (mid.data) setMidias(mid.data.map(mapMidia));
+      if (disp.data) setDispositivos(disp.data.map(mapDispositivo));
+      if (pend.data) setPendingPlayers(pend.data.map(mapPending));
+      if (cfg.data?.value) setApkDownloadUrlState(cfg.data.value);
+    })();
+
+    const channel = supabase
+      .channel("data-store")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "clientes" },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            setClientes((p) => [...p.filter((x) => x.id !== (payload.new as DbCliente).id), mapCliente(payload.new as DbCliente)]);
+          } else if (payload.eventType === "UPDATE") {
+            setClientes((p) => p.map((x) => (x.id === (payload.new as DbCliente).id ? mapCliente(payload.new as DbCliente) : x)));
+          } else if (payload.eventType === "DELETE") {
+            setClientes((p) => p.filter((x) => x.id !== (payload.old as DbCliente).id));
+          }
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "playlists" },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            setPlaylists((p) => [...p.filter((x) => x.id !== (payload.new as DbPlaylist).id), mapPlaylist(payload.new as DbPlaylist)]);
+          } else if (payload.eventType === "UPDATE") {
+            setPlaylists((p) => p.map((x) => (x.id === (payload.new as DbPlaylist).id ? mapPlaylist(payload.new as DbPlaylist) : x)));
+          } else if (payload.eventType === "DELETE") {
+            setPlaylists((p) => p.filter((x) => x.id !== (payload.old as DbPlaylist).id));
+          }
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "midias" },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            setMidias((p) => [...p.filter((x) => x.id !== (payload.new as DbMidia).id), mapMidia(payload.new as DbMidia)]);
+          } else if (payload.eventType === "UPDATE") {
+            setMidias((p) => p.map((x) => (x.id === (payload.new as DbMidia).id ? mapMidia(payload.new as DbMidia) : x)));
+          } else if (payload.eventType === "DELETE") {
+            setMidias((p) => p.filter((x) => x.id !== (payload.old as DbMidia).id));
+          }
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "dispositivos" },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            setDispositivos((p) => [...p.filter((x) => x.id !== (payload.new as DbDispositivo).id), mapDispositivo(payload.new as DbDispositivo)]);
+          } else if (payload.eventType === "UPDATE") {
+            setDispositivos((p) => p.map((x) => (x.id === (payload.new as DbDispositivo).id ? mapDispositivo(payload.new as DbDispositivo) : x)));
+          } else if (payload.eventType === "DELETE") {
+            setDispositivos((p) => p.filter((x) => x.id !== (payload.old as DbDispositivo).id));
+          }
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "pending_players" },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            setPendingPlayers((p) => [...p.filter((x) => x.codigo !== (payload.new as DbPending).codigo), mapPending(payload.new as DbPending)]);
+          } else if (payload.eventType === "UPDATE") {
+            setPendingPlayers((p) => p.map((x) => (x.codigo === (payload.new as DbPending).codigo ? mapPending(payload.new as DbPending) : x)));
+          } else if (payload.eventType === "DELETE") {
+            setPendingPlayers((p) => p.filter((x) => x.codigo !== (payload.old as DbPending).codigo));
+          }
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "app_config", filter: `key=eq.${APK_CONFIG_KEY}` },
+        (payload) => {
+          const row = payload.new as { key: string; value: string } | null;
+          if (row?.value !== undefined) setApkDownloadUrlState(row.value || "");
+        },
+      )
+      .subscribe();
+
+    return () => {
+      active = false;
+      supabase.removeChannel(channel);
+    };
   }, []);
 
-  const setApkDownloadUrl = useCallback((url: string) => {
+  // ---------- Mutations ----------
+  const setApkDownloadUrl = useCallback(async (url: string) => {
     setApkDownloadUrlState(url);
-    if (typeof window !== "undefined") {
-      if (url) localStorage.setItem("signagehub_apk_url", url);
-      else localStorage.removeItem("signagehub_apk_url");
-    }
-  }, []);
-
-  // Simulação de sincronização em tempo real
-  useEffect(() => {
-    const t = setInterval(() => {
-      setDispositivos((prev) =>
-        prev.map((d) =>
-          d.status_online ? { ...d, ultima_sincronizacao: new Date().toISOString() } : d,
-        ),
-      );
-    }, 8000);
-    return () => clearInterval(t);
+    await supabase.from("app_config").upsert({ key: APK_CONFIG_KEY, value: url, atualizado_em: new Date().toISOString() });
   }, []);
 
   const criarCliente: DataCtx["criarCliente"] = useCallback(async (data) => {
-    await delay();
-    const c: Cliente = { ...data, id: uid("cli"), criado_em: new Date().toISOString() };
-    setClientes((p) => [...p, c]);
+    const { data: row, error } = await supabase
+      .from("clientes")
+      .insert({ nome_estabelecimento: data.nome_estabelecimento, contato: data.contato })
+      .select()
+      .single();
+    if (error || !row) throw error ?? new Error("Falha ao criar cliente");
+    const c = mapCliente(row as DbCliente);
+    setClientes((p) => [...p.filter((x) => x.id !== c.id), c]);
     return c;
   }, []);
 
   const atualizarCliente: DataCtx["atualizarCliente"] = useCallback(async (id, data) => {
-    await delay();
-    setClientes((p) => p.map((c) => (c.id === id ? { ...c, ...data } : c)));
+    const { error } = await supabase.from("clientes").update(data).eq("id", id);
+    if (error) throw error;
   }, []);
 
   const removerCliente: DataCtx["removerCliente"] = useCallback(async (id) => {
-    await delay();
-    setClientes((p) => p.filter((c) => c.id !== id));
-    setDispositivos((p) => p.filter((d) => d.cliente_id !== id));
+    const { error } = await supabase.from("clientes").delete().eq("id", id);
+    if (error) throw error;
   }, []);
 
   const vincularDispositivo: DataCtx["vincularDispositivo"] = useCallback(async (data) => {
-    await delay(300);
-    const d: Dispositivo = {
-      id: uid("dev"),
-      cliente_id: data.cliente_id,
-      nome_tela: data.nome_tela,
-      codigo_vinculo: data.codigo_vinculo,
-      playlist_id: null,
-      status_online: true,
-      ultima_sincronizacao: new Date().toISOString(),
-    };
-    setDispositivos((p) => [...p, d]);
+    const { data: row, error } = await supabase
+      .from("dispositivos")
+      .insert({
+        cliente_id: data.cliente_id,
+        nome_tela: data.nome_tela,
+        codigo_vinculo: data.codigo_vinculo,
+        status_online: true,
+        ultima_sincronizacao: new Date().toISOString(),
+      })
+      .select()
+      .single();
+    if (error || !row) throw error ?? new Error("Falha ao vincular dispositivo");
+    const d = mapDispositivo(row as DbDispositivo);
+    setDispositivos((p) => [...p.filter((x) => x.id !== d.id), d]);
     return d;
   }, []);
 
   const vincularPorCodigo: DataCtx["vincularPorCodigo"] = useCallback(async (data) => {
-    await delay(300);
-    // Check pending player with that code
-    const pending = pendingPlayers.find((p) => p.codigo === data.codigo);
-    if (!pending) {
-      throw new Error("Nenhum player aguardando vínculo com esse código");
-    }
-    const d: Dispositivo = {
-      id: pending.device_local_id,
-      cliente_id: data.cliente_id,
-      nome_tela: data.nome_tela,
-      codigo_vinculo: data.codigo,
-      playlist_id: null,
-      status_online: true,
-      ultima_sincronizacao: new Date().toISOString(),
-    };
-    setDispositivos((p) => [...p, d]);
+    const { data: pending } = await supabase
+      .from("pending_players")
+      .select("*")
+      .eq("codigo", data.codigo)
+      .maybeSingle();
+    if (!pending) throw new Error("Nenhum player aguardando vínculo com esse código");
+
+    const { data: row, error } = await supabase
+      .from("dispositivos")
+      .insert({
+        cliente_id: data.cliente_id,
+        nome_tela: data.nome_tela,
+        codigo_vinculo: data.codigo,
+        device_local_id: pending.device_local_id,
+        status_online: true,
+        ultima_sincronizacao: new Date().toISOString(),
+      })
+      .select()
+      .single();
+    if (error || !row) throw error ?? new Error("Falha ao vincular");
+    await supabase.from("pending_players").delete().eq("codigo", data.codigo);
+    const d = mapDispositivo(row as DbDispositivo);
+    setDispositivos((p) => [...p.filter((x) => x.id !== d.id), d]);
     setPendingPlayers((p) => p.filter((x) => x.codigo !== data.codigo));
     return d;
-  }, [pendingPlayers]);
+  }, []);
 
   const registrarPendingPlayer: DataCtx["registrarPendingPlayer"] = useCallback(
     (codigo, device_local_id) => {
-      setPendingPlayers((p) => {
-        if (p.some((x) => x.codigo === codigo)) return p;
-        return [...p, { codigo, device_local_id, criado_em: new Date().toISOString() }];
-      });
+      // Upsert; ignore failure if dispositivo already exists for that code
+      void supabase
+        .from("pending_players")
+        .upsert({ codigo, device_local_id }, { onConflict: "codigo" })
+        .then(({ error }) => {
+          if (error) console.warn("registrarPendingPlayer", error.message);
+        });
     },
     [],
   );
 
   const removerPendingPlayer: DataCtx["removerPendingPlayer"] = useCallback((codigo) => {
-    setPendingPlayers((p) => p.filter((x) => x.codigo !== codigo));
+    void supabase.from("pending_players").delete().eq("codigo", codigo);
   }, []);
 
   const getDispositivoPorCodigo: DataCtx["getDispositivoPorCodigo"] = useCallback(
@@ -366,104 +346,101 @@ export function DataProvider({ children }: { children: ReactNode }) {
   );
 
   const heartbeatDispositivo: DataCtx["heartbeatDispositivo"] = useCallback((id) => {
-    setDispositivos((p) =>
-      p.map((d) =>
-        d.id === id
-          ? { ...d, status_online: true, ultima_sincronizacao: new Date().toISOString() }
-          : d,
-      ),
-    );
+    void supabase
+      .from("dispositivos")
+      .update({ status_online: true, ultima_sincronizacao: new Date().toISOString() })
+      .eq("id", id);
   }, []);
 
   const removerDispositivo: DataCtx["removerDispositivo"] = useCallback(async (id) => {
-    await delay();
-    setDispositivos((p) => p.filter((d) => d.id !== id));
+    const { error } = await supabase.from("dispositivos").delete().eq("id", id);
+    if (error) throw error;
   }, []);
 
   const trocarPlaylistDoDispositivo: DataCtx["trocarPlaylistDoDispositivo"] = useCallback(
     async (id, playlist_id) => {
-      await delay();
-      setDispositivos((p) =>
-        p.map((d) =>
-          d.id === id
-            ? { ...d, playlist_id, ultima_sincronizacao: new Date().toISOString() }
-            : d,
-        ),
-      );
+      const { error } = await supabase
+        .from("dispositivos")
+        .update({ playlist_id, ultima_sincronizacao: new Date().toISOString() })
+        .eq("id", id);
+      if (error) throw error;
     },
     [],
   );
 
   const criarPlaylist: DataCtx["criarPlaylist"] = useCallback(async (nome) => {
-    await delay();
-    const pl: Playlist = { id: uid("pl"), nome_playlist: nome, criado_em: new Date().toISOString() };
-    setPlaylists((p) => [...p, pl]);
+    const { data: row, error } = await supabase
+      .from("playlists")
+      .insert({ nome_playlist: nome })
+      .select()
+      .single();
+    if (error || !row) throw error ?? new Error("Falha ao criar playlist");
+    const pl = mapPlaylist(row as DbPlaylist);
+    setPlaylists((p) => [...p.filter((x) => x.id !== pl.id), pl]);
     return pl;
   }, []);
 
   const renomearPlaylist: DataCtx["renomearPlaylist"] = useCallback(async (id, nome) => {
-    await delay();
-    setPlaylists((p) => p.map((pl) => (pl.id === id ? { ...pl, nome_playlist: nome } : pl)));
+    const { error } = await supabase.from("playlists").update({ nome_playlist: nome }).eq("id", id);
+    if (error) throw error;
   }, []);
 
   const removerPlaylist: DataCtx["removerPlaylist"] = useCallback(async (id) => {
-    await delay();
-    setPlaylists((p) => p.filter((pl) => pl.id !== id));
-    setMidias((p) => p.filter((m) => m.playlist_id !== id));
-    setDispositivos((p) => p.map((d) => (d.playlist_id === id ? { ...d, playlist_id: null } : d)));
+    const { error } = await supabase.from("playlists").delete().eq("id", id);
+    if (error) throw error;
   }, []);
 
   const adicionarMidia: DataCtx["adicionarMidia"] = useCallback(async (data) => {
-    await delay(200);
     const ordem =
       Math.max(0, ...midias.filter((m) => m.playlist_id === data.playlist_id).map((m) => m.ordem_exibicao)) + 1;
-    const m: MidiaPlaylist = {
-      id: uid("md"),
-      playlist_id: data.playlist_id,
-      url_arquivo: data.url_arquivo,
-      tipo_midia: data.tipo_midia,
-      nome_arquivo: data.nome_arquivo,
-      tamanho_bytes: data.tamanho_bytes,
-      duracao_segundos: data.duracao_segundos ?? (data.tipo_midia === "image" ? 10 : 15),
-      ordem_exibicao: ordem,
-    };
-    setMidias((p) => [...p, m]);
+    const { data: row, error } = await supabase
+      .from("midias")
+      .insert({
+        playlist_id: data.playlist_id,
+        url_arquivo: data.url_arquivo,
+        tipo_midia: data.tipo_midia,
+        nome_arquivo: data.nome_arquivo,
+        tamanho_bytes: data.tamanho_bytes,
+        duracao_segundos: data.duracao_segundos ?? (data.tipo_midia === "image" ? 10 : 15),
+        ordem_exibicao: ordem,
+      })
+      .select()
+      .single();
+    if (error || !row) throw error ?? new Error("Falha ao salvar mídia");
+    const m = mapMidia(row as DbMidia);
+    setMidias((p) => [...p.filter((x) => x.id !== m.id), m]);
     return m;
   }, [midias]);
 
   const removerMidia: DataCtx["removerMidia"] = useCallback(async (id) => {
-    await delay();
-    setMidias((p) => p.filter((m) => m.id !== id));
+    const { error } = await supabase.from("midias").delete().eq("id", id);
+    if (error) throw error;
   }, []);
 
   const atualizarDuracaoMidia: DataCtx["atualizarDuracaoMidia"] = useCallback(
     async (id, duracao_segundos) => {
-      await delay(60);
-      setMidias((p) => p.map((m) => (m.id === id ? { ...m, duracao_segundos } : m)));
+      const { error } = await supabase.from("midias").update({ duracao_segundos }).eq("id", id);
+      if (error) throw error;
     },
     [],
   );
 
   const reordenarMidia: DataCtx["reordenarMidia"] = useCallback(async (id, direcao) => {
-    await delay(40);
-    setMidias((prev) => {
-      const target = prev.find((m) => m.id === id);
-      if (!target) return prev;
-      const irmas = prev
-        .filter((m) => m.playlist_id === target.playlist_id)
-        .sort((a, b) => a.ordem_exibicao - b.ordem_exibicao);
-      const idx = irmas.findIndex((m) => m.id === id);
-      const swapIdx = direcao === "up" ? idx - 1 : idx + 1;
-      if (swapIdx < 0 || swapIdx >= irmas.length) return prev;
-      const a = irmas[idx];
-      const b = irmas[swapIdx];
-      return prev.map((m) => {
-        if (m.id === a.id) return { ...m, ordem_exibicao: b.ordem_exibicao };
-        if (m.id === b.id) return { ...m, ordem_exibicao: a.ordem_exibicao };
-        return m;
-      });
-    });
-  }, []);
+    const target = midias.find((m) => m.id === id);
+    if (!target) return;
+    const irmas = midias
+      .filter((m) => m.playlist_id === target.playlist_id)
+      .sort((a, b) => a.ordem_exibicao - b.ordem_exibicao);
+    const idx = irmas.findIndex((m) => m.id === id);
+    const swapIdx = direcao === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= irmas.length) return;
+    const a = irmas[idx];
+    const b = irmas[swapIdx];
+    await Promise.all([
+      supabase.from("midias").update({ ordem_exibicao: b.ordem_exibicao }).eq("id", a.id),
+      supabase.from("midias").update({ ordem_exibicao: a.ordem_exibicao }).eq("id", b.id),
+    ]);
+  }, [midias]);
 
   const value = useMemo<DataCtx>(
     () => ({
