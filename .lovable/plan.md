@@ -1,81 +1,46 @@
-## Resposta direta
+# APK universal 32/64 bits
 
-**Não, hoje não funciona assim.** O APK abre o player, gera um código de 6 dígitos e tenta registrar como "pending". Mas todos os dados (clientes, dispositivos, playlists, mídias, pending players) vivem **apenas em memória/localStorage do navegador atual** — não há backend. Resultado: o código que aparece na TV nunca chega no gerenciador aberto em outro dispositivo, e mesmo que o vínculo fosse feito, as mídias da playlist não chegariam até a TV.
+## Contexto
 
-Para o fluxo desejado (TV mostra código → admin vincula a uma tela com playlist → vídeos/imagens tocam na TV) é obrigatório um backend compartilhado. Plano abaixo usa Lovable Cloud (já habilitado).
+O `signagehub-player` é um app WebView puro (sem código nativo / sem `.so`), então em tese já roda em qualquer arquitetura. Porém o `build.gradle.kts` atual não declara explicitamente as ABIs suportadas e o workflow gera apenas `app-debug.apk` sem garantir que seja "universal". Algumas TV Boxes (especialmente as antigas com Android 7–9 em `armeabi-v7a` / `x86`) rejeitam ou exibem "app não instalado" quando o instalador não reconhece a ABI declarada.
 
-## O que será feito
+A solução é declarar explicitamente as 4 ABIs (`armeabi-v7a`, `arm64-v8a`, `x86`, `x86_64`) e manter **um único APK universal** publicado com o mesmo nome de arquivo — assim a URL pública não muda:
 
-### 1. Backend — tabelas e storage
-
-Migração SQL criando, no schema `public`, com GRANTs + RLS + policies:
-
-- `clientes` (id, nome, criado_em)
-- `playlists` (id, nome, criado_em)
-- `midias` (id, playlist_id, url_arquivo, tipo_midia, nome_arquivo, tamanho_bytes, duracao_segundos, ordem)
-- `dispositivos` (id, cliente_id, nome_tela, codigo_vinculo unique, playlist_id, status_online, ultima_sincronizacao)
-- `pending_players` (codigo pk, device_local_id, criado_em)
-- `app_config` (key pk, value) — guarda `apk_download_url`
-
-Bucket de Storage público `midias` para upload de vídeos/imagens.
-
-**Policies (sem login, fase 1 — destravar o fluxo):**
-- Leitura pública (`anon`) em `dispositivos`, `playlists`, `midias`, `app_config` — necessário porque o APK não faz login.
-- `pending_players`: INSERT/SELECT/DELETE público (código curto de 6 dígitos é o "segredo" temporário).
-- `clientes`/`dispositivos`/`playlists`/`midias` escrita pública por enquanto (igual ao comportamento atual do painel, que também não tem auth). Deixo um TODO claro no plano para colocar auth depois.
-
-> Observação de segurança: hoje o painel admin não tem login. Manter o mesmo nível de acesso para não quebrar nada. Se quiser, depois implementamos auth + roles e restringimos escrita a `authenticated`.
-
-### 2. Refatorar `src/store/data-store.tsx`
-
-Substituir o estado em memória por chamadas Supabase + Realtime:
-
-- Hidratar listas (clientes, dispositivos, playlists, midias, pending_players) via `select`.
-- Inscrever em `postgres_changes` para refletir mudanças em tempo real (essencial: quando admin vincula código, a TV reage sem refresh).
-- Todas as mutações (`criar*`, `vincular*`, `trocarPlaylist*`, `adicionar/removerMidia`, `heartbeat`) viram `insert/update/delete` no Supabase.
-- `apkDownloadUrl` passa a vir de `app_config` (em vez de localStorage por dispositivo) — assim o link configurado pelo admin vale para todos os players.
-
-### 3. Upload de mídia
-
-Em `src/routes/playlists.$id.tsx`, trocar o input atual (provavelmente data URL local) por upload pro bucket `midias` via `supabase.storage.from('midias').upload(...)` e gravar a `publicUrl` em `midias.url_arquivo`. Vídeos/imagens passam a ser servidos por URL pública acessível pelo WebView do APK.
-
-### 4. Player (`src/routes/player.tsx`)
-
-- Mantém geração de código de 6 dígitos e device_local_id no `localStorage` da TV.
-- `registrarPendingPlayer` agora faz `upsert` no Supabase.
-- Em vez de `getDispositivoPorCodigo` em memória, faz `select` + subscribe ao `dispositivos` filtrando por `codigo_vinculo=eq.<codigo>`. Quando aparecer, troca da tela de pareamento para o `PlaybackEngine`.
-- Subscribe também em `midias` filtrando por `playlist_id` do dispositivo, para refletir mudanças de conteúdo ao vivo.
-- `heartbeat` faz `update` em `dispositivos` a cada 30s.
-
-### 5. Painel `/dispositivos`
-
-Tela de vínculo passa a ler `pending_players` em tempo real (admin vê códigos de TVs aguardando) e o `vincularPorCodigo` faz a transação: cria `dispositivos` com o `codigo`, apaga o `pending_player`. Realtime entrega para a TV.
-
-### 6. APK Android
-
-Nenhuma mudança de código nativo necessária — o WebView já abre `https://bright-screen-control.lovable.app/player`. Só publicar o frontend.
-
-## Fluxo final (depois da correção)
-
-```text
-TV liga APK ──► /player gera "428193" ──► INSERT pending_players
-                       │
-                       ▼ (Realtime)
-Admin /dispositivos vê "428193" e clica "Vincular"
-        │
-        ▼ INSERT dispositivos(codigo_vinculo='428193', cliente, nome_tela)
-                       │
-                       ▼ (Realtime)
-TV detecta dispositivo, sai da tela de código
-Admin atribui playlist ──► UPDATE dispositivos.playlist_id
-                       │
-                       ▼ (Realtime)
-TV carrega midias da playlist e PlaybackEngine toca
+```
+https://github.com/claudioresende2025/bright-screen-control/releases/latest/download/signagehub-player.apk
 ```
 
-## Fora de escopo (posso fazer depois se pedir)
+## Alterações
 
-- Login do painel + RLS por usuário/role.
-- Migração dos dados seed atuais.
-- Encurtar/rotacionar código de pareamento após uso.
-- Cache offline de mídias no APK (hoje requer internet para tocar).
+### 1. `android-player/app/build.gradle.kts`
+- Em `defaultConfig`, adicionar:
+  ```kotlin
+  ndk {
+      abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+  }
+  ```
+- Em `android { ... }`, adicionar bloco `splits` desabilitando splits por ABI (garante APK único universal):
+  ```kotlin
+  splits {
+      abi {
+          isEnable = false
+      }
+  }
+  ```
+- Bump `versionCode` para `3` e `versionName` para `"1.0.2"` para que TVs já pareadas atualizem.
+
+### 2. `.github/workflows/build-apk.yml`
+- Sem mudança no nome do artefato (`signagehub-player.apk`) nem na URL.
+- Adicionar passo após o build que valida via `unzip -l` que o APK contém entradas para as 4 ABIs *ou* nenhum diretório `lib/` (caso esperado, já que não há código nativo) — apenas log informativo, não falha o build.
+- Manter `make_latest: "true"` para que o link `/releases/latest/download/signagehub-player.apk` continue apontando para esta build.
+
+## Resultado esperado
+
+- Mesma URL pública de download.
+- Um único APK universal que instala em TV Boxes 32-bit (armv7) e 64-bit (arm64), além de emuladores x86/x86_64 para teste.
+- Próxima instalação no celular/TV substitui a versão atual via `versionCode` 3.
+
+## Fora de escopo
+
+- Assinatura release (continua debug-signed, como hoje).
+- Mudanças no player web ou no fluxo de pareamento.

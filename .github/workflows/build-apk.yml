@@ -67,6 +67,11 @@ jobs:
           ls -lh ../dist/signagehub-player.apk
           test -s ../dist/signagehub-player.apk
 
+      - name: Inspect APK ABIs (informational)
+        run: |
+          echo "Conteudo lib/ do APK (vazio = universal, roda em 32 e 64 bits):"
+          unzip -l ../dist/signagehub-player.apk | grep -E "^.*lib/" || echo "Sem libs nativas -> APK universal (armv7, arm64, x86, x86_64)."
+
       - name: Upload APK as workflow artifact
         uses: actions/upload-artifact@v4
         with:
