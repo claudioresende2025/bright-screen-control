@@ -1,46 +1,25 @@
-# APK universal 32/64 bits
+## Diagnóstico
 
-## Contexto
+A tela preta com "This project is published, but its files are missing" **não é um erro do APK**. O APK está funcionando corretamente — ele apenas abre a WebView em:
 
-O `signagehub-player` é um app WebView puro (sem código nativo / sem `.so`), então em tese já roda em qualquer arquitetura. Porém o `build.gradle.kts` atual não declara explicitamente as ABIs suportadas e o workflow gera apenas `app-debug.apk` sem garantir que seja "universal". Algumas TV Boxes (especialmente as antigas com Android 7–9 em `armeabi-v7a` / `x86`) rejeitam ou exibem "app não instalado" quando o instalador não reconhece a ABI declarada.
+`https://bright-screen-control.lovable.app/player`
 
-A solução é declarar explicitamente as 4 ABIs (`armeabi-v7a`, `arm64-v8a`, `x86`, `x86_64`) e manter **um único APK universal** publicado com o mesmo nome de arquivo — assim a URL pública não muda:
+Essa mensagem vem do servidor de hospedagem da Lovable e significa que a **versão publicada do site está sem os arquivos** (deploy quebrado/expirado). Ou seja, o problema está no site publicado, não no APK nem na URL.
 
-```
-https://github.com/claudioresende2025/bright-screen-control/releases/latest/download/signagehub-player.apk
-```
+## Causa
 
-## Alterações
+Foram feitas várias alterações no projeto (migrations, novos componentes, build do APK) depois da última publicação. O deploy publicado ficou "órfão" — a rota `/player` existe no código atual, mas os arquivos servidos em `bright-screen-control.lovable.app` estão desatualizados/ausentes.
 
-### 1. `android-player/app/build.gradle.kts`
-- Em `defaultConfig`, adicionar:
-  ```kotlin
-  ndk {
-      abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
-  }
-  ```
-- Em `android { ... }`, adicionar bloco `splits` desabilitando splits por ABI (garante APK único universal):
-  ```kotlin
-  splits {
-      abi {
-          isEnable = false
-      }
-  }
-  ```
-- Bump `versionCode` para `3` e `versionName` para `"1.0.2"` para que TVs já pareadas atualizem.
+## Correção definitiva
 
-### 2. `.github/workflows/build-apk.yml`
-- Sem mudança no nome do artefato (`signagehub-player.apk`) nem na URL.
-- Adicionar passo após o build que valida via `unzip -l` que o APK contém entradas para as 4 ABIs *ou* nenhum diretório `lib/` (caso esperado, já que não há código nativo) — apenas log informativo, não falha o build.
-- Manter `make_latest: "true"` para que o link `/releases/latest/download/signagehub-player.apk` continue apontando para esta build.
+1. **Republicar o projeto Lovable** usando a ferramenta de publish, para que `https://bright-screen-control.lovable.app/player` volte a servir os arquivos corretos da build atual.
+2. **NÃO alterar a URL do APK** — continua sendo `https://bright-screen-control.lovable.app/player`, então o APK já instalado nas TVs não precisa ser reinstalado.
+3. **Não alterar a URL de download do APK** — permanece `https://github.com/claudioresende2025/bright-screen-control/releases/latest/download/signagehub-player.apk`.
+4. Após o republish, validar abrindo `/player` no navegador. Se aparecer a tela de pareamento com código, o APK já voltará a funcionar normalmente em todas as TVs (basta reabrir o app).
 
-## Resultado esperado
+## Fora do escopo
 
-- Mesma URL pública de download.
-- Um único APK universal que instala em TV Boxes 32-bit (armv7) e 64-bit (arm64), além de emuladores x86/x86_64 para teste.
-- Próxima instalação no celular/TV substitui a versão atual via `versionCode` 3.
+- Nenhuma mudança de código, schema, build do APK ou URLs.
+- Apenas ação de publicação.
 
-## Fora de escopo
-
-- Assinatura release (continua debug-signed, como hoje).
-- Mudanças no player web ou no fluxo de pareamento.
+Se aprovado, executo o republish no modo build.
