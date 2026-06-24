@@ -144,6 +144,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [midias, setMidias] = useState<MidiaPlaylist[]>([]);
   const [pendingPlayers, setPendingPlayers] = useState<PendingPlayer[]>([]);
   const [apkDownloadUrl, setApkDownloadUrlState] = useState<string>(DEFAULT_APK_URL);
+  const [hydrated, setHydrated] = useState(false);
 
   // ---------- Hydrate + Realtime ----------
   useEffect(() => {
@@ -165,6 +166,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       if (disp.data) setDispositivos(disp.data.map(mapDispositivo));
       if (pend.data) setPendingPlayers(pend.data.map(mapPending));
       if (cfg.data?.value) setApkDownloadUrlState(cfg.data.value);
+      setHydrated(true);
     })();
 
     const channel = supabase
@@ -450,6 +452,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       playlists,
       midias,
       pendingPlayers,
+      hydrated,
       criarCliente,
       atualizarCliente,
       removerCliente,
@@ -476,6 +479,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       dispositivos,
       playlists,
       midias,
+      hydrated,
       pendingPlayers,
       criarCliente,
       atualizarCliente,
