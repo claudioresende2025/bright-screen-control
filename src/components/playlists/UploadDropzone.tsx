@@ -3,7 +3,6 @@ import { useRef, useState } from "react";
 import { Progress } from "@/components/ui/progress";
 import { useData } from "@/store/data-store";
 import { toast } from "sonner";
-import { MediaPreview } from "./MediaPreview";
 import { supabase } from "@/integrations/supabase/client";
 
 const BUCKET = "midias";
@@ -21,16 +20,35 @@ export function UploadDropzone({ playlistId }: { playlistId: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [pending, setPending] = useState<PendingUpload[]>([]);
-  const [previewFile, setPreviewFile] = useState<File | null>(null);
 
-  const uploadFile = async (file: File, duracao: number) => {
+  const probeVideoDuration = (file: File): Promise<number> =>
+    new Promise((resolve) => {
+      try {
+        const url = URL.createObjectURL(file);
+        const v = document.createElement("video");
+        v.preload = "metadata";
+        v.muted = true;
+        const done = (d: number) => {
+          URL.revokeObjectURL(url);
+          resolve(d);
+        };
+        v.onloadedmetadata = () => done(Math.max(1, Math.round(v.duration || 15)));
+        v.onerror = () => done(15);
+        v.src = url;
+      } catch {
+        resolve(15);
+      }
+    });
+
+  const uploadFile = async (file: File) => {
     const id = Math.random().toString(36).slice(2);
     const isImage = file.type.startsWith("image/") || /\.(png|jpe?g|webp|gif)$/i.test(file.name);
-    const isVideo = file.type.startsWith("video/") || /\.(mp4|webm|mov)$/i.test(file.name);
+    const isVideo = file.type.startsWith("video/") || /\.(mp4|webm|mov|m4v)$/i.test(file.name);
     if (!isImage && !isVideo) {
       toast.error(`Formato não suportado: ${file.name}`);
       return;
     }
+    const duracao = isImage ? 8 : await probeVideoDuration(file);
     setPending((p) => [...p, { id, name: file.name, progress: 10 }]);
 
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]+/g, "_");
@@ -68,8 +86,6 @@ export function UploadDropzone({ playlistId }: { playlistId: string }) {
     }
   };
 
-  const [queue, setQueue] = useState<File[]>([]);
-
   const handleFiles = (files: FileList | null) => {
     if (!files) return;
     const arr = Array.from(files).filter((f) => {
@@ -84,38 +100,15 @@ export function UploadDropzone({ playlistId }: { playlistId: string }) {
       return true;
     });
     if (arr.length === 0) return;
-    const [first, ...rest] = arr;
-    setPreviewFile(first);
-    if (rest.length) setQueue((q) => [...q, ...rest]);
-    if (inputRef.current) inputRef.current.value = "";
-  };
-
-  const advanceQueue = () => {
-    setQueue((q) => {
-      if (q.length === 0) return q;
-      const [next, ...rest] = q;
-      setPreviewFile(next);
-      return rest;
+    // Upload todos imediatamente, em paralelo controlado.
+    arr.forEach((f) => {
+      void uploadFile(f);
     });
+    if (inputRef.current) inputRef.current.value = "";
   };
 
   return (
     <div className="space-y-3">
-      {previewFile ? (
-        <MediaPreview
-          file={previewFile}
-          onCancel={() => {
-            setPreviewFile(null);
-            advanceQueue();
-          }}
-          onConfirm={({ duracao_segundos }) => {
-            void uploadFile(previewFile, duracao_segundos);
-            setPreviewFile(null);
-            advanceQueue();
-          }}
-        />
-      ) : null}
-
       <div
         onClick={() => inputRef.current?.click()}
         onDragOver={(e) => {
