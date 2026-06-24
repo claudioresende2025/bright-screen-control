@@ -31,26 +31,26 @@ class MainActivity : AppCompatActivity() {
             settings.apply {
                 javaScriptEnabled = true
                 domStorageEnabled = true
+                databaseEnabled = true
                 mediaPlaybackRequiresUserGesture = false
-                // Forçar sempre buscar do servidor: evita ficar preso em
-                // builds antigos do painel publicado.
-                cacheMode = WebSettings.LOAD_NO_CACHE
+                // HTML é servido como no-cache pelo host; assets são imutáveis.
+                // Usar cache padrão evita travas em redes lentas (TV/4G).
+                cacheMode = WebSettings.LOAD_DEFAULT
                 useWideViewPort = true
                 loadWithOverviewMode = true
+                builtInZoomControls = false
+                displayZoomControls = false
                 allowFileAccess = false
                 allowContentAccess = false
                 mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-                userAgentString = userAgentString + " SignageHubPlayer/1.0 (AndroidTV)"
+                // Usa o UA padrão do WebView — adicionar sufixo customizado
+                // pode disparar regras de bot/CDN e bloquear o carregamento.
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     safeBrowsingEnabled = true
                 }
             }
-            // Limpar cache antigo do WebView ao iniciar — garante que o
-            // app pegue a última versão publicada do /player.
-            clearCache(true)
-            clearHistory()
-            CookieManager.getInstance().removeAllCookies(null)
-            CookieManager.getInstance().flush()
+            CookieManager.getInstance().setAcceptCookie(true)
+            CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
             webViewClient = object : WebViewClient() {
                 override fun onReceivedError(
                     view: WebView,
@@ -76,7 +76,6 @@ class MainActivity : AppCompatActivity() {
                     """.trimIndent()
                     view.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
                     Handler(Looper.getMainLooper()).postDelayed({
-                        view.clearCache(true)
                         view.loadUrl(url)
                     }, 10_000)
                 }
@@ -88,11 +87,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(webView)
         enterImmersiveMode()
 
-        // Cache-bust: força o host a entregar o build mais recente,
-        // evitando que o WebView fique preso em uma resposta antiga.
-        val base = getString(R.string.player_url)
-        val sep = if (base.contains("?")) "&" else "?"
-        webView.loadUrl("$base${sep}v=${System.currentTimeMillis()}")
+        webView.loadUrl(getString(R.string.player_url))
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
