@@ -68,12 +68,35 @@ export function UploadDropzone({ playlistId }: { playlistId: string }) {
     }
   };
 
+  const [queue, setQueue] = useState<File[]>([]);
+
   const handleFiles = (files: FileList | null) => {
     if (!files) return;
-    // Open preview for the first file; queue more later
-    const arr = Array.from(files);
+    const arr = Array.from(files).filter((f) => {
+      const isImage =
+        f.type.startsWith("image/") || /\.(png|jpe?g|webp|gif)$/i.test(f.name);
+      const isVideo =
+        f.type.startsWith("video/") || /\.(mp4|webm|mov|m4v)$/i.test(f.name);
+      if (!isImage && !isVideo) {
+        toast.error(`Formato não suportado: ${f.name}`);
+        return false;
+      }
+      return true;
+    });
     if (arr.length === 0) return;
-    setPreviewFile(arr[0]);
+    const [first, ...rest] = arr;
+    setPreviewFile(first);
+    if (rest.length) setQueue((q) => [...q, ...rest]);
+    if (inputRef.current) inputRef.current.value = "";
+  };
+
+  const advanceQueue = () => {
+    setQueue((q) => {
+      if (q.length === 0) return q;
+      const [next, ...rest] = q;
+      setPreviewFile(next);
+      return rest;
+    });
   };
 
   return (
@@ -81,10 +104,14 @@ export function UploadDropzone({ playlistId }: { playlistId: string }) {
       {previewFile ? (
         <MediaPreview
           file={previewFile}
-          onCancel={() => setPreviewFile(null)}
+          onCancel={() => {
+            setPreviewFile(null);
+            advanceQueue();
+          }}
           onConfirm={({ duracao_segundos }) => {
             void uploadFile(previewFile, duracao_segundos);
             setPreviewFile(null);
+            advanceQueue();
           }}
         />
       ) : null}
@@ -118,7 +145,7 @@ export function UploadDropzone({ playlistId }: { playlistId: string }) {
           ref={inputRef}
           type="file"
           multiple
-          accept="video/mp4,image/png,image/jpeg"
+          accept="video/mp4,video/webm,video/quicktime,image/png,image/jpeg,image/webp,image/gif"
           className="hidden"
           onChange={(e) => handleFiles(e.target.files)}
         />
