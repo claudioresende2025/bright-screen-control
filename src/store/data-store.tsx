@@ -251,7 +251,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [playlists, setPlaylists] = useState<Playlist[]>(seedPlaylists);
   const [midias, setMidias] = useState<MidiaPlaylist[]>(seedMidias);
   const [pendingPlayers, setPendingPlayers] = useState<PendingPlayer[]>([]);
-  const [apkDownloadUrl, setApkDownloadUrlState] = useState<string>("");
+  const DEFAULT_APK_URL =
+    "https://github.com/claudioresende2025/bright-screen-control/releases/latest/download/signagehub-player.apk";
+  const [apkDownloadUrl, setApkDownloadUrlState] = useState<string>(DEFAULT_APK_URL);
 
   // Hydrate APK url from localStorage on mount
   useEffect(() => {
