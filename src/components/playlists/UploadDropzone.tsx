@@ -4,6 +4,11 @@ import { Progress } from "@/components/ui/progress";
 import { useData } from "@/store/data-store";
 import { toast } from "sonner";
 import { MediaPreview } from "./MediaPreview";
+import { supabase } from "@/integrations/supabase/client";
+
+const BUCKET = "midias";
+// 10 years — bucket is private, so we sign URLs at upload time.
+const SIGNED_URL_TTL = 60 * 60 * 24 * 365 * 10;
 
 interface PendingUpload {
   id: string;
@@ -18,47 +23,49 @@ export function UploadDropzone({ playlistId }: { playlistId: string }) {
   const [pending, setPending] = useState<PendingUpload[]>([]);
   const [previewFile, setPreviewFile] = useState<File | null>(null);
 
-  const placeholderUrl = (isImage: boolean, name: string) =>
-    isImage
-      ? `https://picsum.photos/seed/${encodeURIComponent(name)}/600/400`
-      : "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4";
-
-  const simulateUpload = (file: File, duracao: number) => {
+  const uploadFile = async (file: File, duracao: number) => {
     const id = Math.random().toString(36).slice(2);
-    setPending((p) => [...p, { id, name: file.name, progress: 0 }]);
-
     const isImage = file.type.startsWith("image/") || /\.(png|jpe?g|webp|gif)$/i.test(file.name);
     const isVideo = file.type.startsWith("video/") || /\.(mp4|webm|mov)$/i.test(file.name);
     if (!isImage && !isVideo) {
       toast.error(`Formato não suportado: ${file.name}`);
-      setPending((p) => p.filter((x) => x.id !== id));
       return;
     }
+    setPending((p) => [...p, { id, name: file.name, progress: 10 }]);
 
-    const step = () => {
-      setPending((prev) => {
-        const next = prev.map((p) =>
-          p.id === id ? { ...p, progress: Math.min(100, p.progress + 15 + Math.random() * 20) } : p,
-        );
-        const item = next.find((p) => p.id === id);
-        if (item && item.progress >= 100) {
-          adicionarMidia({
-            playlist_id: playlistId,
-            url_arquivo: placeholderUrl(isImage, file.name),
-            tipo_midia: isImage ? "image" : "video",
-            nome_arquivo: file.name,
-            tamanho_bytes: file.size,
-            duracao_segundos: duracao,
-          }).then(() => {
-            toast.success(`${file.name} adicionado à playlist`);
-          });
-          return next.filter((p) => p.id !== id);
-        }
-        setTimeout(step, 200);
-        return next;
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]+/g, "_");
+    const path = `${playlistId}/${Date.now()}_${safeName}`;
+
+    try {
+      const { error: upErr } = await supabase.storage
+        .from(BUCKET)
+        .upload(path, file, {
+          contentType: file.type || (isImage ? "image/jpeg" : "video/mp4"),
+          upsert: false,
+        });
+      if (upErr) throw upErr;
+      setPending((p) => p.map((x) => (x.id === id ? { ...x, progress: 70 } : x)));
+
+      const { data: signed, error: signErr } = await supabase.storage
+        .from(BUCKET)
+        .createSignedUrl(path, SIGNED_URL_TTL);
+      if (signErr || !signed?.signedUrl) throw signErr ?? new Error("Falha ao gerar URL");
+
+      await adicionarMidia({
+        playlist_id: playlistId,
+        url_arquivo: signed.signedUrl,
+        tipo_midia: isImage ? "image" : "video",
+        nome_arquivo: file.name,
+        tamanho_bytes: file.size,
+        duracao_segundos: duracao,
       });
-    };
-    setTimeout(step, 200);
+      toast.success(`${file.name} adicionado à playlist`);
+    } catch (err) {
+      console.error(err);
+      toast.error(err instanceof Error ? err.message : `Falha ao enviar ${file.name}`);
+    } finally {
+      setPending((p) => p.filter((x) => x.id !== id));
+    }
   };
 
   const handleFiles = (files: FileList | null) => {
@@ -76,7 +83,7 @@ export function UploadDropzone({ playlistId }: { playlistId: string }) {
           file={previewFile}
           onCancel={() => setPreviewFile(null)}
           onConfirm={({ duracao_segundos }) => {
-            simulateUpload(previewFile, duracao_segundos);
+            void uploadFile(previewFile, duracao_segundos);
             setPreviewFile(null);
           }}
         />
