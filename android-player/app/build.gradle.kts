@@ -11,8 +11,8 @@ android {
         applicationId = "com.signagehub.player"
         minSdk = 24
         targetSdk = 34
-        versionCode = 3
-        versionName = "1.0.2"
+        versionCode = 4
+        versionName = "1.0.3"
 
         ndk {
             // APK universal: roda em TVs/celulares 32-bit (armv7, x86)
