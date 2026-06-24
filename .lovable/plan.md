@@ -1,25 +1,36 @@
-Plano de correção definitiva:
+## Plano de correção
 
-1. **Confirmar comportamento atual**
-   - A rota pública `/player` está respondendo normalmente.
-   - A URL atual de download do APK também responde e redireciona para o APK mais recente:
-     `https://github.com/claudioresende2025/bright-screen-control/releases/latest/download/signagehub-player.apk`
-   - Portanto, o erro persistente provavelmente está dentro do APK/WebView instalado ou em cache/compatibilidade do Android, não na URL pública do site.
+### 1. Corrigir navegação da página Playlists
 
-2. **Habilitar uso no celular para teste**
-   - O player já é uma página web; ele pode funcionar no navegador do celular acessando:
-     `https://bright-screen-control.lovable.app/player`
-   - Vou ajustar a tela `/player` para ficar correta em celular também, com layout responsivo, código de pareamento legível e instruções compatíveis com teste mobile.
-   - Isso não altera o funcionamento em TVs.
+- Ajustar o card da playlist para usar navegação programática e evitar que componentes internos/camadas de UI impeçam o clique.
+- Após criar uma nova playlist, redirecionar automaticamente para a tela de edição da playlist criada.
+- Adicionar tratamento de erro visível no botão de criação, em vez de fechar o modal mesmo se a criação falhar.
 
-3. **Melhorar diagnóstico dentro do APK**
-   - Ajustar a tela de erro do app Android para mostrar mais detalhes úteis: URL carregada, código do erro, botão/tentativa de recarregar e orientação para abrir a URL no navegador do celular.
-   - Ativar configurações de WebView mais tolerantes para Android TV/TV Box antigos, sem trocar a URL do player.
+### 2. Corrigir upload de vídeos/imagens
 
-4. **Manter a URL de download**
-   - Não vou alterar a URL de download do APK, pois ela já está ativa:
-     `https://github.com/claudioresende2025/bright-screen-control/releases/latest/download/signagehub-player.apk`
+- Revisar o fluxo `UploadDropzone -> Storage -> midias` para expor erro real quando o upload falhar.
+- Aceitar formatos comuns de imagem/vídeo de forma mais robusta (`jpg`, `jpeg`, `png`, `webp`, `gif`, `mp4`, `webm`, `mov`).
+- Permitir seleção múltipla de arquivos de verdade: processar fila de arquivos, não só o primeiro arquivo selecionado.
+- Limpar o input após seleção para permitir reenviar o mesmo arquivo.
+- Validar se o bucket/registro falhou e manter a playlist aberta para nova tentativa.
 
-5. **Após implementar**
-   - Validar `/player` no viewport de celular e desktop.
-   - Informar que, para a correção do APK entrar no app instalado, será necessário gerar/baixar a nova versão do APK e reinstalar na TV/celular de teste.
+### 3. Corrigir o APK/WebView
+
+- O erro do anexo é a página do host dizendo que os arquivos publicados estão ausentes; no navegador a rota atual responde 200, então o APK pode estar carregando um build antigo/cacheado ou uma resposta hospedada anterior.
+- Atualizar o APK para forçar carregamento limpo do `/player`: limpar cache/cookies do WebView na inicialização, usar `LOAD_NO_CACHE`, desabilitar cache de DOM onde aplicável e recarregar a URL pública correta.
+- Melhorar o tratamento de erros para mostrar a URL realmente carregada, código HTTP quando houver e um botão/toque para tentar novamente.
+- Incrementar `versionCode/versionName` para garantir que o celular/TV instale a nova versão por cima.
+
+### 4. Validação
+
+- Testar via browser local a criação de playlist, clique no card e abertura da tela de upload.
+- Validar que a URL publicada do player responde corretamente.
+- Verificar que a configuração do Android aponta para `https://bright-screen-control.lovable.app/player` e que o novo APK não reutiliza cache antigo.
+
+### Observação importante
+
+Depois da correção do código, será necessário gerar/publicar um novo APK e reinstalar no celular/TV. O APK já instalado não muda automaticamente.
+
+&nbsp;
+
+Me enviar a URL atualizada para o novo download do APK.
