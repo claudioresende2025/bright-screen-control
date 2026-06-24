@@ -11,8 +11,23 @@ android {
         applicationId = "com.signagehub.player"
         minSdk = 24
         targetSdk = 34
-        versionCode = 2
-        versionName = "1.0.1"
+        versionCode = 3
+        versionName = "1.0.2"
+
+        ndk {
+            // APK universal: roda em TVs/celulares 32-bit (armv7, x86)
+            // e 64-bit (arm64, x86_64). Sem código nativo, mas declarar
+            // ABIs evita que instaladores recusem o pacote.
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+        }
+    }
+
+    // Garante um único APK universal (sem dividir por ABI),
+    // preservando o mesmo nome de arquivo e a mesma URL pública.
+    splits {
+        abi {
+            isEnable = false
+        }
     }
 
     buildTypes {
