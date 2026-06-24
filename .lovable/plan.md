@@ -1,25 +1,25 @@
-## Diagnóstico
+Plano de correção definitiva:
 
-A tela preta com "This project is published, but its files are missing" **não é um erro do APK**. O APK está funcionando corretamente — ele apenas abre a WebView em:
+1. **Confirmar comportamento atual**
+   - A rota pública `/player` está respondendo normalmente.
+   - A URL atual de download do APK também responde e redireciona para o APK mais recente:
+     `https://github.com/claudioresende2025/bright-screen-control/releases/latest/download/signagehub-player.apk`
+   - Portanto, o erro persistente provavelmente está dentro do APK/WebView instalado ou em cache/compatibilidade do Android, não na URL pública do site.
 
-`https://bright-screen-control.lovable.app/player`
+2. **Habilitar uso no celular para teste**
+   - O player já é uma página web; ele pode funcionar no navegador do celular acessando:
+     `https://bright-screen-control.lovable.app/player`
+   - Vou ajustar a tela `/player` para ficar correta em celular também, com layout responsivo, código de pareamento legível e instruções compatíveis com teste mobile.
+   - Isso não altera o funcionamento em TVs.
 
-Essa mensagem vem do servidor de hospedagem da Lovable e significa que a **versão publicada do site está sem os arquivos** (deploy quebrado/expirado). Ou seja, o problema está no site publicado, não no APK nem na URL.
+3. **Melhorar diagnóstico dentro do APK**
+   - Ajustar a tela de erro do app Android para mostrar mais detalhes úteis: URL carregada, código do erro, botão/tentativa de recarregar e orientação para abrir a URL no navegador do celular.
+   - Ativar configurações de WebView mais tolerantes para Android TV/TV Box antigos, sem trocar a URL do player.
 
-## Causa
+4. **Manter a URL de download**
+   - Não vou alterar a URL de download do APK, pois ela já está ativa:
+     `https://github.com/claudioresende2025/bright-screen-control/releases/latest/download/signagehub-player.apk`
 
-Foram feitas várias alterações no projeto (migrations, novos componentes, build do APK) depois da última publicação. O deploy publicado ficou "órfão" — a rota `/player` existe no código atual, mas os arquivos servidos em `bright-screen-control.lovable.app` estão desatualizados/ausentes.
-
-## Correção definitiva
-
-1. **Republicar o projeto Lovable** usando a ferramenta de publish, para que `https://bright-screen-control.lovable.app/player` volte a servir os arquivos corretos da build atual.
-2. **NÃO alterar a URL do APK** — continua sendo `https://bright-screen-control.lovable.app/player`, então o APK já instalado nas TVs não precisa ser reinstalado.
-3. **Não alterar a URL de download do APK** — permanece `https://github.com/claudioresende2025/bright-screen-control/releases/latest/download/signagehub-player.apk`.
-4. Após o republish, validar abrindo `/player` no navegador. Se aparecer a tela de pareamento com código, o APK já voltará a funcionar normalmente em todas as TVs (basta reabrir o app).
-
-## Fora do escopo
-
-- Nenhuma mudança de código, schema, build do APK ou URLs.
-- Apenas ação de publicação.
-
-Se aprovado, executo o republish no modo build.
+5. **Após implementar**
+   - Validar `/player` no viewport de celular e desktop.
+   - Informar que, para a correção do APK entrar no app instalado, será necessário gerar/baixar a nova versão do APK e reinstalar na TV/celular de teste.
