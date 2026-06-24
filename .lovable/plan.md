@@ -1,44 +1,50 @@
 ## Diagnóstico
 
-A página 404 indica que o arquivo `signagehub-player.apk` não existe na release `v1.0.1` do repositório. Isso acontece porque o workflow do GitHub Actions ainda não rodou com sucesso — sem build, não há APK publicado.
+O build rodou verde (3m 40s) e o release `v1.0.1` foi criado — mas está **sem nenhum asset** (`"assets": []` confirmado via API do GitHub). Por isso a URL `releases/latest/download/signagehub-player.apk` retorna 404.
 
-O repositório já está público (ótimo!), mas falta a etapa de **gerar o APK**.
+**Causa:** mismatch de diretório de trabalho no `.github/workflows/build-apk.yml`.
 
-## O que precisa ser feito (passos manuais no GitHub)
+- O job define `defaults.run.working-directory: android-player`, então o passo "Rename APK" copia o APK para `../dist/signagehub-player.apk` (= `dist/` na raiz do repo). ✅
+- Mas a action `softprops/action-gh-release@v2` **não** herda esse `working-directory` — ela roda a partir da raiz do repo. O caminho `../dist/signagehub-player.apk` resolve para **fora** do repositório, o glob não casa com nada, e o release é publicado vazio sem falhar o job.
 
-Eu não consigo disparar o GitHub Actions a partir do Lovable. Você precisa executar manualmente:
+O APK foi gerado corretamente (já está disponível como **artifact** da workflow run), só não foi anexado ao Release.
 
-### 1. Abrir a página do workflow
+## Correção
+
+Em `.github/workflows/build-apk.yml`, ajustar apenas o passo final:
+
+```yaml
+- name: Publish to GitHub Releases
+  if: github.ref == 'refs/heads/main'
+  uses: softprops/action-gh-release@v2
+  with:
+    tag_name: v1.0.${{ github.run_number }}
+    name: SignageHub Player v1.0.${{ github.run_number }}
+    body: |
+      APK do player Android para Smart TVs / TV Box.
+
+      **Download direto (link estável):**
+      https://github.com/${{ github.repository }}/releases/latest/download/signagehub-player.apk
+
+      Cole esse link em **Configurações → URL pública do APK** no painel SignageHub.
+    files: dist/signagehub-player.apk   # ← era ../dist/...
+    make_latest: "true"
 ```
-https://github.com/claudioresende2025/bright-screen-control/actions/workflows/build-apk.yml
-```
 
-### 2. Disparar o build manualmente
-- Clique no botão **"Run workflow"** (lado direito)
-- Branch: `main`
-- Clique em **"Run workflow"** (verde)
-- Aguarde ~5 minutos
+Mudança única: `../dist/signagehub-player.apk` → `dist/signagehub-player.apk`.
 
-### 3. Verificar o resultado
-- Se ficar **verde** ✅ → vá para a aba **Releases**: `https://github.com/claudioresende2025/bright-screen-control/releases`
-- Confirme que existe a release `v1.0.1` com o arquivo `signagehub-player.apk` anexado
-- Se ficar **vermelho** ❌ → me envie o log do erro (clique no job que falhou e copie a mensagem) que eu corrijo o workflow
+## Passos após aprovar
 
-### 4. Testar a URL final
-Depois do build verde, abra em aba anônima:
-```
-https://github.com/claudioresende2025/bright-screen-control/releases/latest/download/signagehub-player.apk
-```
-Tem que baixar direto, sem pedir login.
+1. Eu aplico a alteração no arquivo do workflow.
+2. Como o `on: push` filtra `paths: android-player/** | .github/workflows/build-apk.yml`, o próprio commit dispara a build automaticamente (não precisa "Run workflow" manual desta vez).
+3. Aguardar ~5 min. Build verde → novo release `v1.0.2` com o APK anexado.
+4. Testar em aba anônima:
+   ```
+   https://github.com/claudioresende2025/bright-screen-control/releases/latest/download/signagehub-player.apk
+   ```
+   Deve baixar direto.
+5. O campo "URL pública do APK" em `/configuracoes` já está com essa URL por padrão (`DEFAULT_APK_URL` em `src/store/data-store.tsx`), então o botão "Baixar APK" em `/dispositivos` e o QR Code passam a funcionar sem mexer no painel.
 
-## Possíveis causas se o build falhar
+## Observação
 
-- Faltam permissões `contents: write` no workflow (necessárias para criar release)
-- Token do GitHub Actions sem permissão de escrita (Settings → Actions → General → Workflow permissions → marcar **"Read and write permissions"**)
-- Erro de compilação do Android (vou analisar o log se acontecer)
-
-## Próxima ação
-
-Rode o workflow manualmente conforme passo 2 e me avise:
-- ✅ "Build verde" → eu valido o QR code e o botão "Baixar APK" no app
-- ❌ "Build falhou" + log do erro → eu corrijo o workflow
+Não vou tocar no release `v1.0.1` atual (conforme sua escolha). Ele fica vazio mas inofensivo — `releases/latest/download/...` vai apontar para o `v1.0.2` assim que a próxima run terminar com `make_latest: true`.

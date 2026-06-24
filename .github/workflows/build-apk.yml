@@ -82,5 +82,5 @@ jobs:
             https://github.com/${{ github.repository }}/releases/latest/download/signagehub-player.apk
 
             Cole esse link em **Configurações → URL pública do APK** no painel SignageHub.
-          files: ../dist/signagehub-player.apk
+          files: dist/signagehub-player.apk
           make_latest: "true"
