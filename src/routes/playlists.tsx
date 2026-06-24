@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { ListMusic, Plus, ChevronRight, Film, Image as ImageIcon } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -32,8 +32,10 @@ export const Route = createFileRoute("/playlists")({
 
 function NovaPlaylistDialog() {
   const { criarPlaylist } = useData();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [nome, setNome] = useState("");
+  const [saving, setSaving] = useState(false);
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -59,15 +61,27 @@ function NovaPlaylistDialog() {
             Cancelar
           </Button>
           <Button
+            disabled={saving}
             onClick={async () => {
               if (!nome.trim()) return toast.error("Informe um nome");
-              await criarPlaylist(nome.trim());
-              toast.success("Playlist criada");
-              setNome("");
-              setOpen(false);
+              setSaving(true);
+              try {
+                const pl = await criarPlaylist(nome.trim());
+                toast.success("Playlist criada");
+                setNome("");
+                setOpen(false);
+                navigate({ to: "/playlists/$id", params: { id: pl.id } });
+              } catch (err) {
+                console.error(err);
+                toast.error(
+                  err instanceof Error ? err.message : "Falha ao criar playlist",
+                );
+              } finally {
+                setSaving(false);
+              }
             }}
           >
-            Criar
+            {saving ? "Criando..." : "Criar"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -108,7 +122,8 @@ function Playlists() {
                 key={pl.id}
                 to="/playlists/$id"
                 params={{ id: pl.id }}
-                className="block group"
+                preload="intent"
+                className="block group cursor-pointer"
               >
                 <Card className="bg-card/70 border-border/60 group-hover:border-primary/40 group-hover:shadow-[0_8px_30px_-12px_rgba(82,130,255,0.35)] transition-all">
                   <CardContent className="p-5">
